@@ -8,9 +8,9 @@ float remap(float v, float a1, float b1, float a2, float b2, bool clamp = false)
   float res = a2 + (v - a1) / (b1 - a1) * (b2 - a2);
   if(clamp){
     if(a2 <= b2) {
-      return fmin(fmax(res, a2), b2);
+      return min(max(res, a2), b2);
     } else {
-      return fmin(fmax(res, b2), a2);
+      return min(max(res, b2), a2);
     }
   } else {
     return res;
@@ -73,4 +73,3 @@ bool Timer::check(unsigned long time){
     return false;
   }
 }
-

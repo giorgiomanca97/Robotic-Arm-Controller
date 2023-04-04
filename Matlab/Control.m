@@ -10,9 +10,10 @@ disp(ports);
 %% Parameters
 N = 6;
 port = ports(1);
-baudrate = 500000;
-T = 0:0.01:60;
+baudrate = 115200;
+T = 0:0.01:2;
 pwms = [255 * sin(2*pi.*T./10); 255 * cos(2*pi.*T./10); 2 * T; 255 * sin(2*pi.*T./10); 255 * cos(2*pi.*T./10); 2 * T];
+pwms = [0 * ones(1, length(T)); 64 * ones(1, length(T)); 0 * ones(1, length(T)); 0 * ones(1, length(T)); 0 * ones(1, length(T)); 0 * ones(1, length(T))];
 
 num = zeros(1, length(T));
 status = zeros(1, length(T));
@@ -50,7 +51,7 @@ robot.stop_motors();
 
 
 %%
-tiledlayout(5,1);
+tiledlayout(6,1);
 
 ax1 = nexttile;
 plot(T', num', 'k');
@@ -65,22 +66,28 @@ title("Status");
 legend("status");
 
 ax3 = nexttile;
-plot(T', switches');
+plot(T', pwms');
 grid on;
-title("Status");
-legend("switch " + string(1:N));
+title("PWMs");
+legend("pwm " + string(1:N));
 
 ax4 = nexttile;
+plot(T', switches');
+grid on;
+title("Switches");
+legend("switch " + string(1:N));
+
+ax5 = nexttile;
 plot(T', delta');
 grid on;
 title("Delta");
 legend("delta " + string(1:N));
 
-ax5 = nexttile;
+ax6 = nexttile;
 plot(T', encoders');
 grid on;
 title("Encoders");
 legend("encoders " + string(1:N));
 
-linkaxes([ax1, ax2, ax3, ax4, ax5], 'x');
+linkaxes([ax1, ax2, ax3, ax4, ax5, ax6], 'x');
 

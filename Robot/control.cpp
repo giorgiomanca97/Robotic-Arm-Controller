@@ -1,11 +1,15 @@
 #include "control.h"
 
 
+// ==================================================
 // Integrator
+// ==================================================
 
 void Integrator::init(float ts)
 {
   this->ts = ts;
+
+  reset();
 }
 
 void Integrator::reset()
@@ -45,7 +49,9 @@ float Integrator::evolve(float u)
 }
 
 
+// ==================================================
 // PID
+// ==================================================
 
 void PID::init(float ts, float pole, float sat, bool bumpless)
 {
@@ -69,7 +75,7 @@ void PID::init(float ts, float pole, float sat, bool bumpless)
     D = 1/ts;
   }
 
-  apply_saturation();
+  reset();
 }
 
 void PID::setup(float kp, float ki, float kd)
@@ -136,13 +142,17 @@ void PID::apply_saturation()
 }
 
 
+// ==================================================
 // Filter
+// ==================================================
 
 void Filter::init(float tau, float ts)
 {
   A = exp(-ts/tau);
   B = (1-A)*tau;
   C = 1/tau;
+
+  reset();
 }
 
 void Filter::reset()
@@ -180,4 +190,3 @@ float Filter::evolve(float u)
 
   return y;
 }
-

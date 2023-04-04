@@ -5,108 +5,871 @@
 // Communication
 // ==================================================
 
-Communication::RCVctrl::RCVctrl(unsigned char n){
-  this->values = malloc(n * sizeof(short));
+#if defined(MEGA)
+static void Communication::channel(uint8_t index){
+  switch(index){
+    case 0:
+      hwserial = &Serial;
+      break;
+    case 1:
+      hwserial = &Serial1;
+      break;
+    case 2:
+      hwserial = &Serial2;
+      break;
+    case 3:
+      hwserial = &Serial3;
+      break;
+    default:
+      hwserial = &Serial;
+      break;
+  }
+}
+#else
+static void Communication::channel(uint8_t index){
+  switch(index){
+    case 0:
+      hwserial = &Serial;
+      break;
+    default:
+      hwserial = &Serial;
+      break;
+  }
+}
+#endif
+
+static bool Communication::convert(uint8_t value, Communication::Code &code){
+  switch(value){
+    case (uint8_t) Code::IDLE:
+      code = Code::IDLE;
+      return true;
+    case (uint8_t) Code::PWM:
+      code = Code::PWM;
+      return true;
+    case (uint8_t) Code::REF:
+      code = Code::REF;
+      return true;
+    case (uint8_t) Code::ROBOT:
+      code = Code::ROBOT;
+      return true;
+    case (uint8_t) Code::MOTOR:
+      code = Code::MOTOR;
+      return true;
+    case (uint8_t) Code::PID:
+      code = Code::PID;
+      return true;
+    case (uint8_t) Code::ACKC:
+      code = Code::ACKC;
+      return true;
+    case (uint8_t) Code::ACKS:
+      code = Code::ACKS;
+      return true;
+    case (uint8_t) Code::ERROR:
+      code = Code::ERROR;
+      return true;
+    default:
+      code = Code::ERROR;
+      return false;
+  }
 }
 
-Communication::RCVctrl::~RCVctrl(){
-  free(this->values);
+static bool Communication::isCtrl(Code code){
+  uint8_t value = (uint8_t) code;
+  return ((value & 0b10000) == 0) && ((value & 0b01000) == 0) && ((value & 0b00100) == 0);
 }
 
-Communication::SNDctrl::SNDctrl(unsigned char n){
-  this->switches = malloc(n * sizeof(bool));
-  this->values = malloc(n * sizeof(short));
+static bool Communication::isSetup(Code code){
+  uint8_t value = (uint8_t) code;
+  return ((value & 0b10000) == 1) && ((value & 0b01000) == 0) && ((value & 0b00100) == 0);
 }
 
-Communication::SNDctrl::~SNDctrl(){
-  free(this->switches);
-  free(this->values);
+static bool Communication::isAck(Code code){
+  uint8_t value = (uint8_t) code;
+  return ((value & 0b10000) == 1) && ((value & 0b01000) == 1) && ((value & 0b00100) == 0);
 }
 
-Communication::RCVsetup::RCVsetup(){
-  this->values = malloc(6 * sizeof(float));
+static bool Communication::isError(Code code){
+  uint8_t value = (uint8_t) code;
+  return ((value & 0b10000) == 1) && ((value & 0b01000) == 1) && ((value & 0b00100) == 1);
 }
 
-Communication::RCVsetup::~RCVsetup(){
-  free(this->values);
-}
-
-Communication::SNDsetup::SNDsetup(){
-
-}
-
-Communication::SNDsetup::~SNDsetup(){
-
-}
-
-static Communication::Next Communication::peek(){
-  int res = (Serial.available() > 0) ? Serial.peek() : -1;
-
-  if(res == -1) {
-    return Next::None;
+static bool Communication::peek(Communication::Header *hdr, Timer *timeout_us = NULL){
+  if(hdr == NULL) return false;
+  int res;
+  if(timeout_us == NULL) {
+    res = hwserial->peek();
   } else {
-    uint8_t byte = ((uint8_t) res) & 0b00011111;
-    if(byte == 0 || byte == 1 || byte == 2){
-      return Next::Ctrl;
-    } else if(byte == 3) {
-      return Next::Setup;
-    } else {
-      return Next::Error;
-    }
+    while(res != -1){
+      if(timeout_us->check(micros())) break;
+      res = hwserial->peek();
+    } 
+  }
+  if(res == -1) return false;
+  return hdr->parse(res);
+}
+
+static bool Communication::rcv(Communication::Message *msg, Timer *timeout_us = NULL){
+  if(msg == NULL) return false;
+  uint8_t buffer[msg->size()];
+  while(hwserial->available() < msg->size()) if(timeout_us != NULL && timeout_us->check(micros())) return false;
+  if(hwserial->readBytes(buffer, msg->size()) != msg->size()) return false;
+  return msg->from(buffer);
+}
+
+static bool Communication::snd(Communication::Message *msg){
+  if(msg == NULL) return false;
+  uint8_t buffer[msg->size()];
+  msg->fill(buffer);
+  return hwserial->write(buffer, msg->size()) == msg->size();
+}
+
+static void Communication::flush(){
+  hwserial->flush();
+}
+
+// ===== Header =====
+
+Communication::Code Communication::Header::getCode(){
+  return this->code;
+}
+
+uint8_t Communication::Header::getNum(){
+  return this->num;
+}
+
+bool Communication::Header::setCode(Communication::Code code){
+  this->code = code;
+  return true;
+}
+
+bool Communication::Header::setNum(uint8_t num){
+  if(num < 8) {
+    this->num = num;
+    return true;
+  } else {
+    return false;
   }
 }
 
-static void Communication::rcv(RCVctrl *rcv_ctrl){
-  uint8_t byte;
-  while(Serial.available() < 1);
-  byte = Serial.read();
+bool Communication::Header::parse(uint8_t byte){
+  Code code;
+  bool res = convert((byte & 0b11111000) >> 3, code);
+  setCode(code);
+  setNum(byte & 0b00000111);
+  return res;
+}
 
-  rcv_ctrl->num = (byte >> 5) + 1;
-  rcv_ctrl->command = byte & 0b00011111;
+uint8_t Communication::Header::byte(){
+  return (((uint8_t) this->code) << 3) | num;
+}
 
-  while(Serial.available() < 1);
-  byte = Serial.read();
+uint8_t Communication::Header::from(uint8_t *buffer){
+  return parse(*buffer);
+}
 
-  for (int i = 0; i < rcv_ctrl->num; i++) {
-    while(Serial.available() < 1);
-    rcv_ctrl->values[i] = (1 - 2 *((byte >> i) & 0b00000001)) * ((short) Serial.read());
+uint8_t Communication::Header::fill(uint8_t *buffer){
+  buffer[0] = byte();
+  return 1;
+}
+
+// ===== Message =====
+
+Communication::Message::Message(Code code){
+  header.setCode(code);
+}
+
+Communication::Code Communication::Message::getCode(){
+  return header.getCode();
+}
+
+uint8_t Communication::Message::getNum(){
+  return header.getNum();
+}
+
+bool Communication::Message::setNum(uint8_t num){
+  return header.setNum(num);
+}
+
+uint8_t Communication::Message::size(){
+  return size_header() + size_payload();
+}
+
+uint8_t Communication::Message::from(uint8_t *buffer){
+  if(from_header(buffer) != size_header()) return 0;
+  if(from_payload(buffer) != size_payload()) return 0;
+  return size();
+}
+
+uint8_t Communication::Message::fill(uint8_t *buffer){
+  if(!fill_header(buffer) != size_header()) return 0;
+  if(!fill_payload(buffer) != size_payload()) return 0;
+  return size();
+}
+
+uint8_t Communication::Message::size_payload(){
+  return 0;
+}
+
+uint8_t Communication::Message::from_payload(uint8_t *buffer){
+  return size_payload();
+}
+
+uint8_t Communication::Message::fill_payload(uint8_t *buffer){
+  return size_payload();
+}
+
+uint8_t Communication::Message::size_header(){
+  return 1;
+}
+
+uint8_t Communication::Message::from_header(uint8_t *buffer){
+  Code code;
+  bool res = convert((buffer[0] & 0b11111000) >> 3, code);
+  if(getCode() != code) return 0;
+  setNum(buffer[1] & 0b00000111);
+  return size_header();
+}
+
+uint8_t Communication::Message::fill_header(uint8_t *buffer){
+  buffer[0] = (((uint8_t) getCode()) << 3) | getNum();
+  return size_header();
+}
+
+// ===== MsgIDLE =====
+
+uint8_t Communication::MsgIDLE::getCount(){
+  return getNum() + 1;
+}
+
+bool Communication::MsgIDLE::setCount(uint8_t count){
+  return setNum(count - 1);
+}
+
+uint8_t Communication::MsgIDLE::size_payload(){
+  return 0;
+}
+
+uint8_t Communication::MsgIDLE::from_payload(uint8_t *buffer){
+  return size_payload();
+}
+
+uint8_t Communication::MsgIDLE::fill_payload(uint8_t *buffer){
+  return size_payload();
+}
+
+// ===== MsgPWM =====
+
+uint8_t Communication::MsgPWM::getCount(){
+  return getNum() + 1;
+}
+
+int16_t Communication::MsgPWM::getPwm(uint8_t index){
+  if(index < getCount()){
+    return pwms[index];
+  } else {
+    return 0;
   }
 }
 
-static void Communication::snd(SNDctrl *snd_ctrl){
-  buffer[0] = (((uint8_t) (snd_ctrl->num - 1)) << 5) | (snd_ctrl->status & 0b00011111);
+bool Communication::MsgPWM::setCount(uint8_t count){
+  return setNum(count - 1);
+}
+
+bool Communication::MsgPWM::setPwm(uint8_t index, int16_t value){
+  if(index < getCount()){
+    pwms[index] = min(max(value, -255), 255);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+uint8_t Communication::MsgPWM::size_payload(){
+  return 1 + getCount();
+}
+
+uint8_t Communication::MsgPWM::from_payload(uint8_t *buffer){
+  for(uint8_t i = 0; i < getCount(); i++){
+    setPwm(i, ((buffer[1] & ((0b00000001) << i)) ? -1 : +1) * ((int16_t) buffer[2+i]));
+  }
+  return size_payload();
+}
+
+uint8_t Communication::MsgPWM::fill_payload(uint8_t *buffer){
+  buffer[1] = 0b00000000;
+  for(uint8_t i = 0; i < getCount(); i++){
+    buffer[1] = buffer[1] | ((getPwm(i) < 0) << i);
+    buffer[2+i] = abs(getPwm(i));
+  }
+  return size_payload();
+}
+
+// ===== MsgREF =====
+
+uint8_t Communication::MsgREF::getCount(){
+  return getNum() + 1;
+}
+
+int16_t Communication::MsgREF::getDeltaEnc(uint8_t index){
+  if(index < getCount()){
+    return deltas[index];
+  } else {
+    return 0;
+  }
+}
+
+bool Communication::MsgREF::setCount(uint8_t count){
+  return setNum(count - 1);
+}
+
+bool Communication::MsgREF::setDeltaEnc(uint8_t index, int16_t value){
+  if(index < getCount()){
+    deltas[index] = min(max(value, -255), 255);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+uint8_t Communication::MsgREF::size_payload(){
+  return 1 + getCount();
+}
+
+uint8_t Communication::MsgREF::from_payload(uint8_t *buffer){
+  for(uint8_t i = 0; i < getCount(); i++){
+    setDeltaEnc(i, ((buffer[1] & (1 << i)) ? -1 : +1) * ((int16_t) buffer[2+i]));
+  }
+  return size_payload();
+}
+
+uint8_t Communication::MsgREF::fill_payload(uint8_t *buffer){
+  buffer[1] = 0b00000000;
+  for(uint8_t i = 0; i < getCount(); i++){
+    buffer[1] = buffer[1] | ((getDeltaEnc(i) < 0) << i);
+    buffer[2+i] = abs(getDeltaEnc(i));
+  }
+  return size_payload();
+}
+
+// ===== MsgROBOT =====
+
+uint8_t Communication::MsgROBOT::getCount(){
+  return getNum() + 1;
+}
+
+uint32_t Communication::MsgROBOT::getTimeSampling(){
+  return timesampling_us;
+}
+
+bool Communication::MsgROBOT::setCount(uint8_t count){
+  return setNum(count - 1);
+}
+
+bool Communication::MsgROBOT::setTimeSampling(uint32_t value){
+  timesampling_us = value;
+  return true;
+}
+
+uint8_t Communication::MsgROBOT::size_payload(){
+  return 4;
+}
+
+uint8_t Communication::MsgROBOT::from_payload(uint8_t *buffer){
+  uint32_t ts;
+  memcpy((void *) &ts, (void *) (buffer+1), 4);
+  setTimeSampling(ts);
+  return size_payload();
+}
+
+uint8_t Communication::MsgROBOT::fill_payload(uint8_t *buffer){
+  uint32_t ts;
+  ts = getTimeSampling();
+  memcpy((void *) (buffer+1), (void *) &ts, 4);
+  return size_payload();
+}
+
+// ===== MsgMOTOR =====
+
+uint8_t Communication::MsgMOTOR::getIndex(){
+  return getNum();
+}
+
+bool Communication::MsgMOTOR::getChangeEncoder(){
+  return flags & (1u << 0);
+}
+
+bool Communication::MsgMOTOR::getInvertSpinDir(){
+  return flags & (1u << 1);
+}
+
+bool Communication::MsgMOTOR::getChangeSpinDir(){
+  return flags & (1u << 2);
+}
+
+int8_t Communication::MsgMOTOR::getSpinDirection(){
+  return getChangeSpinDir() ? (getInvertSpinDir() ? -1 : 1) : 0;
+}
+
+bool Communication::MsgMOTOR::getInvertEncDir(){
+  return flags & (1u << 3);
+}
+
+bool Communication::MsgMOTOR::getChangeEncDir(){
+  return flags & (1u << 4);
+}
+
+int8_t Communication::MsgMOTOR::getEncDirection(){
+  return getChangeEncDir() ? (getInvertEncDir() ? -1 : 1) : 0;
+}
+
+uint32_t Communication::MsgMOTOR::getEncoderValue(){
+  return encoder;
+}
+
+bool Communication::MsgMOTOR::setIndex(uint8_t index){
+  return setNum(index);
+}
+
+bool Communication::MsgMOTOR::setChangeEncoder(bool value){
+  flags = flags | (value << 0);
+  return true;
+}
+
+bool Communication::MsgMOTOR::setInvertSpinDir(bool value){
+  flags = flags | (value << 1);
+  return true;
+}
+
+bool Communication::MsgMOTOR::setChangeSpinDir(bool value){
+  flags = flags | (value << 2);
+  return true;
+}
+
+bool Communication::MsgMOTOR::setSpinDirection(int8_t dir){
+  setInvertSpinDir(dir < 0);
+  setChangeSpinDir(dir != 0);
+  return true;
+}
+
+bool Communication::MsgMOTOR::setInvertEncDir(bool value){
+  flags = flags | (value << 3);
+  return true;
+}
+
+bool Communication::MsgMOTOR::setChangeEncDir(bool value){
+  flags = flags | (value << 4);
+  return true;
+}
+
+bool Communication::MsgMOTOR::setEncDirection(int8_t dir){
+  setInvertEncDir(dir < 0);
+  setChangeEncDir(dir != 0);
+  return true;
+}
+
+bool Communication::MsgMOTOR::setEncoderValue(uint32_t value){
+  encoder = value;
+  return true;
+}
+
+uint8_t Communication::MsgMOTOR::size_payload(){
+  return 5;
+}
+
+uint8_t Communication::MsgMOTOR::from_payload(uint8_t *buffer){
+  setSpinDirection((buffer[1] & (1 << 1)) ? ((buffer[1] & (1 << 0)) ? -1 : +1) : 0);
+  setEncDirection( (buffer[1] & (1 << 3)) ? ((buffer[1] & (1 << 2)) ? -1 : +1) : 0);
+  return size_payload();
+}
+
+uint8_t Communication::MsgMOTOR::fill_payload(uint8_t *buffer){
+  int16_t spin = getSpinDirection();
+  int16_t enc = getEncDirection();
+  buffer[1] = ((enc == 0) << 3) | ((enc == -1) << 2) | ((spin == 0) << 1) | ((spin == -1) << 0);
+  return size_payload();
+}
+
+// ===== MsgPID =====
+
+uint8_t Communication::MsgPID::getIndex(){
+  return getNum();
+}
+
+float Communication::MsgPID::getPidDiv(){
+  return div;
+}
+
+float Communication::MsgPID::getPidKp(){
+  return kp;
+}
+
+float Communication::MsgPID::getPidKi(){
+  return ki;
+}
+
+float Communication::MsgPID::getPidKd(){
+  return kd;
+}
+
+float Communication::MsgPID::getPidPole(){
+  return pole;
+}
+
+float Communication::MsgPID::getPidSat(){
+  return sat;
+}
+
+bool Communication::MsgPID::setIndex(uint8_t index){
+  return setNum(index);
+}
+
+bool Communication::MsgPID::setPidDiv(float value){
+  div = value;
+  return true;
+}
+
+bool Communication::MsgPID::setPidKp(float value){
+  kp = value;
+  return true;
+}
+
+bool Communication::MsgPID::setPidKi(float value){
+  ki = value;
+  return true;
+}
+
+bool Communication::MsgPID::setPidKd(float value){
+  kd = value;
+  return true;
+}
+
+bool Communication::MsgPID::setPidPole(float value){
+  pole = value;
+  return true;
+}
+
+bool Communication::MsgPID::setPidSat(float value){
+  sat = value;
+  return true;
+}
+
+uint8_t Communication::MsgPID::size_payload(){
+  return 24;
+}
+
+uint8_t Communication::MsgPID::from_payload(uint8_t *buffer){
+  float div, kp, ki, kd, pole, sat;
+  memcpy((void *) &div , (void *) (buffer+ 1), 4);
+  memcpy((void *) &kp  , (void *) (buffer+ 5), 4);
+  memcpy((void *) &ki  , (void *) (buffer+ 9), 4);
+  memcpy((void *) &kd  , (void *) (buffer+13), 4);
+  memcpy((void *) &pole, (void *) (buffer+17), 4);
+  memcpy((void *) &sat , (void *) (buffer+21), 4);
+  setPidDiv(div);
+  setPidKp(kp);
+  setPidKi(ki);
+  setPidKd(kd);
+  setPidPole(pole);
+  setPidSat(sat);
+  return size_payload();
+}
+
+uint8_t Communication::MsgPID::fill_payload(uint8_t *buffer){
+  float div, kp, ki, kd, pole, sat;
+  div = getPidDiv();
+  kp = getPidKp();
+  ki = getPidKi();
+  kd = getPidKd();
+  pole = getPidPole();
+  sat = getPidSat();
+  memcpy((void *) (buffer+ 1), (void *) &div , 4);
+  memcpy((void *) (buffer+ 5), (void *) &kp  , 4);
+  memcpy((void *) (buffer+ 9), (void *) &ki  , 4);
+  memcpy((void *) (buffer+13), (void *) &kd  , 4);
+  memcpy((void *) (buffer+17), (void *) &pole, 4);
+  memcpy((void *) (buffer+21), (void *) &sat , 4);
+  return size_payload();
+}
+
+// ===== MsgACKC =====
+
+uint8_t Communication::MsgACKC::getCount(){
+  return getNum() + 1;
+}
+
+bool Communication::MsgACKC::getEndStop(uint8_t index){
+  if(index < getCount()){
+    return endstops & (1 << index);
+  } else {
+    return false;
+  }
+}
+
+int16_t Communication::MsgACKC::getDeltaEnc(uint8_t index){
+  if(index < getCount()){
+    return deltas[index];
+  } else {
+    return 0;
+  }
+}
+
+bool Communication::MsgACKC::setCount(uint8_t count){
+  return setNum(count - 1);
+}
+
+bool Communication::MsgACKC::setEndStop(uint8_t index, bool value){
+  if(index < getCount()){
+    endstops = endstops | (value << index);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool Communication::MsgACKC::setDeltaEnc(uint8_t index, int16_t value){
+  if(index < getCount()){
+    deltas[index] = min(max(value, -255), 255);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+uint8_t Communication::MsgACKC::size_payload(){
+  return 2 + getCount();
+}
+
+uint8_t Communication::MsgACKC::from_payload(uint8_t *buffer){
+  for(uint8_t i = 0; i < getCount(); i++){
+    setEndStop(i, buffer[1] & (1 << i));
+    setDeltaEnc(i, ((buffer[2] & (1 << i)) ? -1 : +1) * ((int16_t) buffer[3+i]));
+  }
+  return size_payload();
+}
+
+uint8_t Communication::MsgACKC::fill_payload(uint8_t *buffer){
   buffer[1] = 0b00000000;
   buffer[2] = 0b00000000;
-
-  for(int i = 0; i < snd_ctrl->num; i++) {
-    buffer[1] = buffer[1] | (snd_ctrl->switches[i] ? (0b00000001 << i) : 0b00000000);
-    buffer[2] = buffer[2] | ((snd_ctrl->values[i] < 0) ? (0b00000001 << i) : 0b00000000);
-    buffer[3+i] = (uint8_t) min(abs(snd_ctrl->values[i]), 255);
+  for(uint8_t i = 0; i < getCount(); i++){
+    buffer[1] = buffer[1] | (getEndStop(i) << i);
+    buffer[2] = buffer[2] | ((getDeltaEnc(i) < 0) << i);
+    buffer[3+i] = abs(getDeltaEnc(i));
   }
-
-  Serial.write(buffer, 3+snd_ctrl->num);
+  return size_payload();
 }
 
-static void Communication::rcv(RCVsetup *rcv_setup){
-  uint8_t byte;
-  while(Serial.available() < 1);
-  byte = Serial.read();
+// ===== MsgACKS =====
 
-  rcv_setup->num = (byte >> 5);
-  rcv_setup->command = byte & 0b00011111;
+uint8_t Communication::MsgACKS::getCount(){
+  return getNum() + 1;
+}
 
-  for (int i = 0; i < 6; i++){
-    rcv_setup->values[i] = 0b0;
-    uint8_t bytes[4] = {0b0, 0b0, 0b0, 0b0};
-    for (int j = 0; j < 4; j++){
-      while(Serial.available() < 1);
-      bytes[j] = Serial.read();
+uint8_t Communication::MsgACKS::getIndex(){
+  return getNum();
+}
+
+bool Communication::MsgACKS::setCount(uint8_t count){
+  return setNum(count - 1);
+}
+
+bool Communication::MsgACKS::setIndex(uint8_t index){
+  return setNum(index);
+}
+
+uint8_t Communication::MsgACKS::size_payload(){
+  return 0;
+}
+
+uint8_t Communication::MsgACKS::from_payload(uint8_t *buffer){
+  return size_payload();
+}
+
+uint8_t Communication::MsgACKS::fill_payload(uint8_t *buffer){
+  return size_payload();
+}
+
+// ===== MsgERROR =====
+
+uint8_t Communication::MsgERROR::getCount(){
+  return getNum() + 1;
+}
+
+uint8_t Communication::MsgERROR::getIndex(){
+  return getNum();
+}
+
+bool Communication::MsgERROR::setCount(uint8_t count){
+  return setNum(count - 1);
+}
+
+bool Communication::MsgERROR::setIndex(uint8_t index){
+  return setNum(index);
+}
+
+uint8_t Communication::MsgERROR::size_payload(){
+  return 0;
+}
+
+uint8_t Communication::MsgERROR::from_payload(uint8_t *buffer){
+  return size_payload();
+}
+
+uint8_t Communication::MsgERROR::fill_payload(uint8_t *buffer){
+  return size_payload();
+}
+
+
+// ==================================================
+// RobotComm
+// ==================================================
+
+RobotComm::RobotComm(Robot &robot, PinControl &toggle, uint8_t channel) :
+  robot(robot), toggle(toggle) {
+  this->channel = channel;
+  this->encoders_rcv = malloc(robot.getSize() * sizeof(long));
+  this->encoders_snd = malloc(robot.getSize() * sizeof(long));
+}
+
+RobotComm::~RobotComm(){
+  free(this->encoders_rcv);
+  free(this->encoders_snd);
+}
+
+void RobotComm::cycle(uint32_t time_us){
+  robot.update();
+  timeout.reset(time_us);
+
+  Communication::Header header;
+  bool res;
+
+  Communication::channel(channel);
+  res = Communication::peek(&header, &timeout);
+  if(res){
+    Communication::Code code = header.getCode();
+    
+    if(Communication::isCtrl(code)) {
+      Communication::MsgACKC msg_ackc;
+      msg_ackc.setCount(robot.getSize());
+
+      if(robot.getStatus() == Robot::Status::Idle){
+        timer.reset(time_us);
+      } else {
+        while(!timer.check(time_us));
+      }
+
+      toggle.set(true);
+
+      if(robot.getStatus() != Robot::Status::Idle){
+        for(uint8_t i = 0; i < 8; i++){
+          msg_ackc.setEndStop(i, robot.getEndStop(i));
+          msg_ackc.setDeltaEnc(i, robot.getEncoder(i) - encoders_snd[i]);
+          encoders_snd[i] += msg_ackc.getDeltaEnc(i);
+        }
+        res = Communication::snd(&msg_ackc);
+      } else {
+        res = true;
+      }
+      
+      if(res){
+        switch(code){
+          case Communication::Code::IDLE:
+            Communication::MsgIDLE msg_idle;
+            res = Communication::rcv(&msg_idle, &timeout);
+            if(!res) break;
+            robot.setStatus(Robot::Status::Idle);
+            break;
+
+          case Communication::Code::PWM:
+            Communication::MsgPWM msg_pwm;
+            res = Communication::rcv(&msg_pwm, &timeout);
+            if(!res) break;
+            robot.setStatus(Robot::Status::Pwm);
+            for(uint8_t i = 0; i < robot.getSize(); i++) {
+              robot.setPwm(i, msg_pwm.getPwm(i));
+            }
+            break;
+
+          case Communication::Code::REF:
+            Communication::MsgREF msg_ref;
+            res = Communication::rcv(&msg_ref, &timeout);
+            if(!res) break;
+            robot.setStatus(Robot::Status::Ref);
+            for(uint8_t i = 0; i < robot.getSize(); i++) {
+              encoders_rcv[i] += msg_ref.getDeltaEnc(i);
+              robot.setTarget(i, encoders_rcv[i]);
+            }
+            break;
+        }
+      }
+      
+      if(res){
+        robot.compute();
+        robot.actuate();
+
+        if(robot.getStatus() == Robot::Status::Idle){
+          for(uint8_t i = 0; i < 8; i++){
+            msg_ackc.setEndStop(i, robot.getEndStop(i));
+            msg_ackc.setDeltaEnc(i, robot.getEncoder(i) - encoders_snd[i]);
+            encoders_snd[i] += msg_ackc.getDeltaEnc(i);
+          }
+          res = Communication::snd(&msg_ackc);
+        }        
+      }
+      
+      toggle.set(false);
+    } 
+    
+    else if(Communication::isSetup(code)) {
+      robot.setStatus(Robot::Status::Idle, true);
+      Communication::MsgACKS msg_acks;
+
+      switch(code){
+        case Communication::Code::ROBOT:
+          Communication::MsgROBOT msg_robot;
+          res = Communication::rcv(&msg_robot, &timeout);
+          if(!res) break;
+          robot.setTimeSampling(msg_robot.getTimeSampling());
+          timer.setup(msg_robot.getTimeSampling());
+          timeout.setup(msg_robot.getTimeSampling());
+          msg_acks.setCount(robot.getSize());
+          break;
+
+        case Communication::Code::MOTOR:
+          Communication::MsgMOTOR msg_motor;
+          res = Communication::rcv(&msg_motor, &timeout);
+          if(!res) break;
+          if(msg_motor.getChangeEncoder()) robot.setEncoder(msg_motor.getIndex(), msg_motor.getEncoderValue());
+          if(msg_motor.getChangeSpinDir()) robot.invertMotor(msg_motor.getIndex(), msg_motor.getInvertSpinDir());
+          if(msg_motor.getChangeEncDir()) robot.invertEncoder(msg_motor.getIndex(), msg_motor.getInvertEncDir());
+          msg_acks.setIndex(msg_motor.getIndex());
+          break;
+
+        case Communication::Code::PID:
+          Communication::MsgPID msg_pid;
+          res = Communication::rcv(&msg_pid, &timeout);
+          if(!res) break;
+          robot.initPID(msg_motor.getIndex(), msg_pid.getPidPole(), msg_pid.getPidSat());
+          robot.setupPID(msg_motor.getIndex(), msg_pid.getPidDiv(), msg_pid.getPidKp(), msg_pid.getPidKi(), msg_pid.getPidKd());
+          robot.resetPID(msg_motor.getIndex());
+          msg_acks.setIndex(msg_motor.getIndex());
+          break;
+      }
+      
+      if(res){
+        res = Communication::snd(&msg_acks);
+      }
     }
-    rcv_setup->values[i] = *((float *) bytes);
-  }
-}
 
-static void Communication::snd(SNDsetup *snd_setup){
-  uint8_t byte = snd_setup->status & 0b00011111;
-  Serial.write(byte);
+    else {
+      res = false;
+    }
+
+    if(!res){
+      robot.setStatus(Robot::Status::Idle, true);
+      Communication::flush();
+      Communication::MsgERROR msg_error;
+      msg_error.setCount(robot.getSize());
+      Communication::snd(&msg_error);
+    }
+  }
 }

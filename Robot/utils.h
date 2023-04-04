@@ -4,6 +4,7 @@
 #define PI 3.1415926535897932384626433832795028841971693993751058209
 
 
+#include <Arduino.h>
 #include <math.h>
 
 
@@ -21,7 +22,6 @@ public:
   Timer(unsigned long delta, unsigned long time);
 
   void setup(unsigned long delta);
-  
   void reset(unsigned long time);
   bool check(unsigned long time);
 

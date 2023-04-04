@@ -13,13 +13,14 @@
 #define LEONARDO
 #endif
 
-//#define PIN_EXTRA_FEATURES
+//#define PIN_CONTROL_EXTRA_FEATURES
+//#define PIN_MEASURE_EXTRA_FEATURES
+
 
 #include <Arduino.h>
 #include <math.h>
 #include "utils.h"
 #include "control.h"
-#include "communication.h"
 
 
 #if defined(UNO) || defined(MEGA)
@@ -130,13 +131,16 @@ public:
   PinControl(uint8_t pin);
   PinControl(uint8_t pin, float v1, float v2);
   
+  uint8_t getPin();
+
   void setLimits(float v1, float v2);
 
   void set(bool state);
   void pwm(uint8_t pwm);
   void control(float value);
-  #if defined(PIN_EXTRA_FEATURES)
+  #if defined(PIN_CONTROL_EXTRA_FEATURES)
   void feedback(float error);
+  void feedback();
 
   void setPID(PID *pid);
   PID* getPID();
@@ -146,7 +150,7 @@ private:
   uint8_t pin;
   float v1;
   float v2;
-  #if defined(PIN_EXTRA_FEATURES)
+  #if defined(PIN_CONTROL_EXTRA_FEATURES)
   PID *pid;
   #endif
 };
@@ -157,12 +161,15 @@ public:
   PinMeasure(uint8_t pin, bool pullup = false);
   PinMeasure(uint8_t pin, float v1, float v2, bool pullup = false);
   
+  uint8_t getPin();
+  
   void setLimits(float v1, float v2);
 
   bool state();
   uint16_t value();
   float measure();
-  #if defined(PIN_EXTRA_FEATURES)
+  #if defined(PIN_MEASURE_EXTRA_FEATURES)
+  float filter(bool readonly);
   float filter();
 
   void setFilter(Filter *filter);
@@ -173,7 +180,7 @@ private:
   uint8_t pin;
   float v1;
   float v2;
-  #if defined(PIN_EXTRA_FEATURES)
+  #if defined(PIN_MEASURE_EXTRA_FEATURES)
   Filter* fil;
   #endif
 };
@@ -200,7 +207,7 @@ public:
   void updateEncoder();             // Update encoder ticks
 
   void invertMotor(bool invert);    // Invert physical spin direction of the motor
-  void driveMotor(short spwm);      // Assign pwm with sign for spin direction
+  void driveMotor(int16_t spwm);      // Assign pwm with sign for spin direction
 
   bool isInEndStop();               // Check if motor is at endstop
 
@@ -225,87 +232,90 @@ private:
 // 1-8 DoF Robot with DC Motors
 class Robot {
 public:
-  Robot(PinControl &enable, PinControl &toggle, unsigned long ts_ms, uint8_t size, Motor **motors, float *encs_div);
-  Robot(PinControl &enable, PinControl &toggle, unsigned long ts_ms, uint8_t size, Motor **motors);
-  Robot(PinControl &enable, PinControl &toggle, unsigned long ts_ms, uint8_t size);
+  Robot(PinControl &enable, uint8_t size, uint32_t ts_us);
   ~Robot();
 
-  // Robot possible commands
-  enum class Command : uint8_t {
-    Idle = 0,
-    DAQ = 1,
-    PID = 2,
-    Setup = 3
+  // Operating modes
+  enum class Status : uint8_t{
+    Idle = 0,   // All the motor are stopped
+    Pwm  = 1,   // The robot act as a DAQ (pwm direct control)
+    Ref  = 2    // The robot track encoders setpoint
   };
-
-  // Robot possible statuses
-  enum class Status : uint8_t {
-    Idle = 0,
-    DAQ = 1,
-    PID = 2,
-    Setup = 3
-  };
-
+  
   int getSize();                                      // Return number of motors
+
   Status getStatus();                                 // Return robot status
-  void setStatus(Status status, bool reset = false);  // Set robot internal status
+  bool setStatus(Status status, bool reset = false);  // Set robot internal status
 
-  Motor * getMotor(uint8_t index);                              // Return pointer to motor of specified index
-  void setMotor(uint8_t index, Motor * motor);                  // Set robot's motor of specified index
-  void setMotor(uint8_t index, Motor * motor, float enc_div);   // Set robot's motor of specified index and relative encoder divider
-  void setEncoderDivider(uint8_t index, float enc_div);         // Set motor's encoder divider for specified index
+  uint32_t getTimeSampling();                     // Get robot time sampling (in microseconds)
+  void setTimeSampling(uint32_t ts_us);           // Set robot time sampling (in microseconds)
 
-  PID * getPID(uint8_t index);                                    // Return pointer to motor's PID specified by index
-  void initPIDs(float ts, float pole, float sat, bool bumpless);  // Initialize all PIDs with following parameters
-  void setupPIDs(float kp, float ki, float kd);                   // Initialize all PIDs with following coefficients
-  void resetPIDs();                                               // Reset all PIDs state
+  void setMotor(uint8_t index, Motor &motor);     // Set robot's motor specified by index
+  void invertMotor(uint8_t index, bool inv);      // Invert motor's spin direction specified by index
+
+  void initPID(uint8_t index, float pole, float sat);                     // Set PID properties for motor specified by index
+  void setupPID(uint8_t index, float div, float kp, float ki, float kd);  // Set PID gains for motor specified by index
+  void resetPID(uint8_t index, float xi, float xd);                       // Set PID state for motor specified by index
+  void resetPID(uint8_t index);                                           // Reset PID state for motor specified by index
+  void resetPIDs();                                                       // Reset all PIDs state
   
+  void updateEncoder(uint8_t index);            // Update encoder value for motor specified by index
   void updateEncoders();                        // Update all motors' encoders
-  void setEncoders(long *values);               // Set encoders' values
+  void invertEncoder(uint8_t index, bool inv);  // Invert encoder count direction
+  long getEncoder(uint8_t index);               // Get encoder value for motor specified by index 
   void setEncoder(uint8_t index, long value);   // Set encoder value for motor specified by index 
-  void resetEncoders();                         // Reset all motors' encoders
+  void resetEncoder(uint8_t index);             // Reset encoder value for motor specified by index
+  void resetEncoders();                         // Reset all motors' encoders to zero
   
-  void setPWMs(short *pwms);                    // Set motors' PWMs values
-  void setPWM(uint8_t index, short pwm);        // Set PWM value for motor specified by index 
-  void resetPWMs();                             // Reset all motors' PWMs values to zero
+  int16_t getPwm(uint8_t index);                // Get PWM value for motor specified by index 
+  void setPwm(uint8_t index, int16_t pwm);      // Set PWM value for motor specified by index 
+  void resetPwm(uint8_t index);                 // Reset all motors' PWM values to zero
+  void resetPwms();                             // Reset all motors' PWM values to zero
+
+  long getTarget(uint8_t index);                // Get encoder target value for motor specified by index 
+  void setTarget(uint8_t index, long value);    // Set encoder target value for motor specified by index 
+  void resetTarget(uint8_t index);              // Reset encoder target value for motor specified by index
+  void resetTargets();                          // Reset all motors' encoder target to zero
+
+  void updateEndStop(uint8_t index);            // Update endstop value for motor specified by index
+  void updateEndStops();                        // Update all motors' endstop value
+  bool getEndStop(uint8_t index);               // Get endstop value for motor specified by index
+
+  int16_t getAction(uint8_t index);             // Get Action value for motor specified by index
+  void setAction(uint8_t index, int16_t act);   // Set Action value for motor specified by index
+  void resetAction(uint8_t index);              // Reset all motors' Action values to zero
+  void resetActions();                          // Reset all motors' Action values to zero
 
   void enableMotors();                          // Enable all motors
   void disableMotors();                         // Disable all motors
   
-  Communication::Next peek();         // Check next message type
-  void rcvCtrl();                     // Receive and process a control message from serial communication
-  void sndCtrl();                     // Make and send a control response to serial communication
-  void rcvSetup();                    // Receive and process a setup message from serial communication
-  void sndSetup();                    // Make and send a setup response to serial communication
-
-  void update();                      // Update robot internal state according to status and received data
-  void actuate();                     // Apply computed PWMs
-  void cycle(unsigned long time_ms);  // Looping function
-  
+  void update();                  // Update robot sensors readings
+  void compute();                 // compute actions (final pwms values) according to robot status
+  void actuate();                 // Apply computed actions (final pwms values)
+  void reset();                   // Reset internal variables
   
 private:
-  PinControl &pin_enable; // Pin for motors enabling/disabling
-  PinControl &pin_toggle; // Pin for motors enabling/disabling
+  PinControl &enable;     // Pin for motors enabling/disabling
 
-  unsigned long ts;       // Time sampling in milliseconds
-  unsigned char size;     // Number of motors
+  uint8_t size;           // Number of motors
+  uint32_t ts;            // Time sampling in microseconds
   Motor **motors;         // Pointers array to Motors
   PID *pids;              // Pointer to motors' PIDs
-  
-  Status status;          // Robot status
-  Timer timer;            // Robot cycle timer
-  
-  bool *switches;         // Motors' endstops switches values
-  short *motors_pwm;      // Motors' PWMs current values
 
-  long *encoders_snd;     // Cumulative encoders values sent
-  long *encoders_rcv;     // Cumulative encoders values received
-  float *error_div;       // Encoders error dividers
+  Status status;          // Robot status
+
+  float *pids_div;        // Encoders error dividers
+  float *pids_kp;         // Encoders error dividers
+  float *pids_ki;         // Encoders error dividers
+  float *pids_kd;         // Encoders error dividers
+  float *pids_pole;       // Encoders error dividers
+  float *pids_sat;        // Encoders error dividers
   
-  Communication::SNDctrl *snd_ctrl;     // Control message data
-  Communication::RCVctrl *rcv_ctrl;     // Control response data
-  Communication::SNDsetup *snd_setup;   // Setup message data
-  Communication::RCVsetup *rcv_setup;   // Setup response data
+  long    *mot_encs;      // Motors' encoders values
+  int16_t *mot_pwms;      // Motors' PWMs current values
+  long    *mot_refs;      // Motors' target encoders values
+  bool    *mot_ends;      // Motors' endstop values
+  int16_t *mot_acts;      // Motors' PWMs actuation values
 };
 
 

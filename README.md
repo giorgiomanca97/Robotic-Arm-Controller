@@ -1,58 +1,202 @@
 # **Serial Communication**
 
 Serial communication protocol for DC motors control by a microcontroller (Arduino, Raspberry, STM32, ...), supporting the following features:
-- Support up to 8 motors (N = numbers of motors)
+- Support up to 8 motors (N := numbers of motors)
 - The companion PC specify command/operation-mode to the microcontroller.
 - The board communicate its state and whether the motors reached theirs endstops.
-- Use 8+1 bits for pwms and delta-encoders transmission (the extra bit is for value's sign).
-- Allow to setup microcontroller on-board PIDs/Parameters.
+- Use 8+1 bits for pwms and delta-encoders transmission (the extra bit is for values' sign).
+- Allow to setup microcontroller on-board robot parameters.
 
-
-The messages have the following format:
-
-|  Byte | Description                                                                           |
-| ----- | ------------------------------------------------------------------------------------- |
-|   1   | **Header**: carry command/status codes and motor number/selection.                    |
-|  2-X  | **Payload**: carry data coherent to the command/status specified in the header byte.  |
-
-There are two types of messages:
-- **Control messages**: used during control.
-- **Setup messages**: used to set on-board controllers parameters.
+The communication is always started by the Companion PC (the master), while the Microcontroller (the slave) always reply to a received message.\
+Conversely, the Microcontroller never send a message (namely a reply) if not triggered by a message from the Companion PC.\
+The exchange of message is eventually timed by the microcontroller (in respect of the operation mode).
 
 <br><br>
 
-## **Sending (From companion PC to Microcontroller)**
+# **Messages**
+
+The **messages** have the following format:
+
+| Byte n. | Description                                                                             |
+| ------- | --------------------------------------------------------------------------------------- |
+|    1    | **Header**: carry command/status code and motor count/index.                            |
+|   2-X   | **Payload**: carry data coherent to the code specified in the header byte.              |
+
+There are four types of messages:
+- **Control messages** (*ctrl*): used by the master during control operation.
+- **Setup messages** (*setup*): used by the master to set slave's parameters.
+- **Response messages** (*ack*): used by the slave as acknowledgement.
+- **Error messages** (*error*): used by both the master and the slave in caso of errors.
+
+<br><br>
+
+## **Header**
+
+The **header** is 1 byte length for both sides of the communication. Let number the bits from the LSb one to the MSb one (87654321). The header byte has the following format:
+
+| Bits n. | Name | Description                                                                      |
+| ------- | ---- | -------------------------------------------------------------------------------- |
+|   8-4   | CODE | 5 bits code specifing message type and payload.                                  |
+|   3-1   |  NUM | 3 bits unsigned number specifing motor count/index (in respect to code).         |
 
 <br>
 
-The companion PC sends as **control messages** of 2+N bytes with the following format:
-
-|  Byte | Description                                                                           |
-| ----- | ------------------------------------------------------------------------------------- |
-|   1   | Bit [1-3] number of motors (N-1).<br> Bit [4-8] control command to board.             |
-|   2   | Bit-mask for motors directions [87654321].<br> Bit value: 0 = positive, 1 = negative. |
-|   3   | unsigned PWM/delta-encoder value (from 0 to 255) for motor 1.                         |
-|  ...  | ...                                                                                   |
-|  N+2  | unsigned PWM/delta-encoder value (from 0 to 255) for motor N.                         |
+The possible **ACK** values are:
+- 0: for command messages, sent by the master (Companion PC).
+- 1: for response messages, sent by the slave (Microcontroller).
 
 <br>
 
-The companion PC sends as **setup messages** of 25 bytes with the following format:
+The possible **CODE** values are:
 
-|  Byte | Description                                                                           |
-| ----- | ------------------------------------------------------------------------------------- |
-|   1   | Bit [1-3] motor index [0, N-1] selected. <br> Bit [4-8] setup command.                |
-|  2-5  | Float (little-endian) for encoder error divider.                                      |
-|  6-9  | Float (little-endian) for PID proportional coefficient.                               |
-| 10-13 | Float (little-endian) for PID integral coefficient.                                   |
-| 14-17 | Float (little-endian) for PID derivative coefficient.                                 |
-| 18-21 | Float (little-endian) for PID dirty derivative pole.                                  |
-| 20-25 | Float (little-endian) for PID integral saturation.                                    |
+| Code | Binary |  Name |  Type | Description                                                       |
+| ---- | ------ | ----- | ----- | ----------------------------------------------------------------- |
+|    0 |  00000 |  IDLE |  ctrl | set all motors speed to zero.                                     |
+|    1 |  00001 |   PWM |  ctrl | directly assign PWMs values.                                      |
+|    2 |  00010 |   REF |  ctrl | assign desired encoders values.                                   |
+|   16 |  10000 | ROBOT | setup | set robot general parameters (time-sampling).                     |
+|   17 |  10001 | MOTOR | setup | set spin/encoder direction and encoder value for motor in header. |
+|   18 |  10010 |   PID | setup | sending parameters for PID controller in header.                  |
+|   24 |  11000 |  ACKC |   ack | response for control messages.                                    |
+|   25 |  11001 |  ACKS |   ack | response for setup messages.                                      |
+|   31 |  11111 | ERROR | error | used in case of unexpected/wrong messages.                        |
+
+<br><br>
+
+## **Messages**
+
+Message payload formats from companion PC to microcontroller, for every defined code.
 
 <br>
 
-The PID values are expressed in continuos time domain (discretization made on-board according to internal time sampling).\
-Float are expressed with 4 bytes with little-endian notation, which mean from least to most significant byte, that is:
+### ***IDLE***
+
+Payload of 0 bytes -> message of 1 byte.
+
+| Byte n. | Description                                                                             |
+| ------- | --------------------------------------------------------------------------------------- |
+| 1 (hdr) | CODE: 00000 (**IDLE**).<br>NUM: number of motors minus one (N-1).                       |
+
+<br>
+
+### ***PWM***
+
+Payload of N+1 bytes -> message of N+2 bytes.
+
+| Byte n. | Description                                                                             |
+| ------- | --------------------------------------------------------------------------------------- |
+| 1 (hdr) | CODE: 00001 (**PWM**).<br>NUM: number of motors minus one (N-1).                        |
+|    2    | Bit-mask for values' sign [87654321].<br> Bit value: 0 = positive, 1 = negative.        |
+|    3    | Unsigned pwm value in [0, 255] for motor 1.                                             |
+|   ...   | ...                                                                                     |
+|   N+2   | Unsigned pwm value in [0, 255] for motor N.                                             |
+
+<br>
+
+### ***REF***
+
+Payload of N+1 bytes -> message of N+2 bytes.
+
+| Byte n. | Description                                                                             |
+| ------- | --------------------------------------------------------------------------------------- |
+| 1 (hdr) | CODE: 00010 (**REF**).<br>NUM: number of motors minus one (N-1).                        |
+|    2    | Bit-mask for values' sign [87654321].<br> Bit value: 0 = positive, 1 = negative.        |
+|    3    | Unsigned delta-encoder value in [0, 255] for motor 1.                                   |
+|   ...   | ...                                                                                     |
+|   N+2   | Unsigned delta-encoder value in [0, 255] for motor N.                                   |
+
+<br>
+
+### ***ROBOT***
+
+Payload of 4 bytes -> message of 5 bytes.
+
+| Byte n. | Description                                                                             |
+| ------- | --------------------------------------------------------------------------------------- |
+| 1 (hdr) | CODE: 10000 (**ROBOT**).<br>NUM: number of motors minus one (N-1).                      |
+|   2-5   | Unsigned timesampling in microseconds resetting value in [0, 2^32 - 1].                 |
+
+Note: the timesampling value is in little-endian notation.  
+
+<br>
+
+### ***MOTOR***
+
+Payload of 5 bytes -> message of 6 bytes.
+
+| Byte n. | Description                                                                             |
+| ------- | --------------------------------------------------------------------------------------- |
+| 1 (hdr) | CODE: 10001 (**MOTOR**).<br>NUM: selected motor index in [0, N-1].                      |
+|    2    | Motor setup flags (5 bits used).                                                        |
+|   3-6   | Signed encoder resetting value [-2^31, 2^31 - 1].                                       |
+
+The setup flags byte has the following format ([87654321]):
+- bit 1: specify whether to change encoder count;
+- bit 2: specify motor spin direction;
+- bit 3: specify whether to change motor spin direction;
+- bit 4: specify encoder count direction;
+- bit 5: specify whether to change encoder count direction;
+- from bit 6 to bit 8: unused.
+
+Note: the encoder value is in little-endian two's complement notation.  
+
+<br>
+
+### ***PID***
+
+Payload of 24 bytes -> message of 25 bytes.
+
+| Byte n. | Description                                                                             |
+| ------- | --------------------------------------------------------------------------------------- |
+| 1 (hdr) | CODE: 10010 (**PID**).<br>NUM: selected motor index in [0, N-1].                        |
+|   2-5   | Float (little-endian) for PID encoder error divider.                                    |
+|   6-9   | Float (little-endian) for PID proportional coefficient.                                 |
+|  10-13  | Float (little-endian) for PID integral coefficient.                                     |
+|  14-17  | Float (little-endian) for PID derivative coefficient.                                   |
+|  18-21  | Float (little-endian) for PID dirty derivative pole.                                    |
+|  20-25  | Float (little-endian) for PID integral saturation.                                      |
+
+Note: PID values are expressed in continuos time domain (discretization made on-board according to microcontroller time sampling).
+
+<br>
+
+### ***ACKC***
+
+Payload of N+2 bytes -> message of N+3 bytes.
+
+| Byte n. | Description                                                                             |
+| ------- | --------------------------------------------------------------------------------------- |
+| 1 (hdr) | CODE: 11000 (**ACKC**).<br>NUM: number of motor minus one (N-1).                        |
+|    2    | Bit-mask for motors end-stop state [87654321].<br> Bit value: 0 = false, 1 = true.      |
+|    3    | Bit-mask for values' sign [87654321].<br> Bit value: 0 = positive, 1 = negative.        |
+|    4    | Unsigned delta-encoder value in [0, 255] for motor 1.                                   |
+|   ...   | ...                                                                                     |
+|   N+3   | Unsigned delta-encoder value in [0, 255] for motor N.                                   |
+
+<br>
+
+### ***ACKS***
+
+Payload of 0 bytes -> message of 1 bytes.
+
+| Byte n. | Description                                                                             |
+| ------- | --------------------------------------------------------------------------------------- |
+| 1 (hdr) | CODE: 11001 (**ACKS**).<br>NUM: number of motors (N-1) or selected motor index [0, N-1].|
+
+<br>
+
+### ***ERROR***
+
+| Byte n. | Description                                                                             |
+| ------- | --------------------------------------------------------------------------------------- |
+| 1 (hdr) | CODE: 11111 (**ERROR**).<br>NUM: number of motors minus one (N-1).                      |
+
+<br><br>
+
+## **Little-endian transmission**
+
+Value composed by 2+ bytes are expressed in little-endian notation, which mean from least to most significant byte. 
+For example, flot Float values that means:
 ~~~
 float 32 bits:  D8 D7 D6 D5 D4 D3 D2 D1 | C8 C7 C6 C5 C4 C3 C2 C1 | B8 B7 B6 B5 B4 B3 B2 B1 | A8 A7 A6 A5 A4 A3 A2 A1
 
@@ -63,63 +207,6 @@ float 32 bits:  D8 D7 D6 D5 D4 D3 D2 D1 | C8 C7 C6 C5 C4 C3 C2 C1 | B8 B7 B6 B5 
 
 bytes sent:     A8 A7 A6 A5 A4 A3 A2 A1 | B8 B7 B6 B5 B4 B3 B2 B1 | C8 C7 C6 C5 C4 C3 C2 C1 | D8 D7 D6 D5 D4 D3 D2 D1
 ~~~
-
-<br>
-
-**Command values** (last 5 bits of header byte) can be:
-
-| Value |  Bits | Description                                                                   |
-| ----- | ----- | ----------------------------------------------------------------------------- |
-|   0   | 00000 | Idle: set all motors speed to zero.                                           |
-|   1   | 00001 | DAQ mode: directly assign PWMs values.                                        |
-|   2   | 00010 | PID mode: assign desired encoders values.                                     |
-|   3   | 00011 | Setup: sending parameters for PID specified in header.                        |
-| other | xxxxx | Unused.                                                                       |
-
-<br>
-
-## **Receiving (From Microcontroller to Companion PC)**
-
-<br>
-
-The microcontroller sends as **control response** of 3+N bytes with the following format:
-
-| Byte | Description                                                                            |
-| ---- | -------------------------------------------------------------------------------------- |
-|   1  | Bit [1-3] number of motors (N).<br> Bit [4-8] board's status.                          |
-|   2  | Bit-mask for motors end-stop state [87654321].<br> Bit value: 0 = false, 1 = true      |
-|   3  | Bit-mask for encoders directions [87654321].<br> Bit value: 0 = positive, 1 = negative.|
-|   4  | unsigned delta-encoder value (from 0 to 255) of motor 1.                               |
-|  ... | ...                                                                                    |
-|  N+3 | unsigned delta-encoder value (from 0 to 255) of motor N.                               |
-
-<br>
-
-The microcontroller sends as **setup response** of 1 byte with the following format:
-
-|  Byte | Description                                                                           |
-| ----- | ------------------------------------------------------------------------------------- |
-|   1   | Bit [1-3] set to zero. <br> Bit [4-8] setup status (as ACK).                          |
-
-<br>
-
-**Status values** (last 5 bits of header byte) can be:
-
-| Value |  Bits | Description                                                                   |
-| ----- | ----- | ----------------------------------------------------------------------------- |
-|   0   | 00000 | Idle: all motors speed setted to zero.                                        |
-|   1   | 00001 | DAQ mode: operating as a DAQ using pwms received.                             |
-|   2   | 00010 | PID mode: using PID controllers to follow encoder set-points.                 |
-|   3   | 00011 | Setup: PID parameters received.                                               |
-| other | xxxxx | Unused.                                                                       |
-
-<br>
-
-## **Protocol**
-
-<br>
-
-The communication is always started by the Companion PC, while the Microcontroller always reply to a received message.\
-Conversely, the Microcontroller never send a message (namely a reply) if not triggered by a message from the Companion PC.\
-The exchange of message is timed by the microcontroller only during DAQ and PID mode.\
-Then overall the communication consists of alternating messages from the Companion PC and replies from the Microcontroller, always started by the first one and eventually timed by the second one.
+Note: usually computers store all their data in little-endian format. Rule of thumb:
+- Big-endian: human-friendly format.
+- Little-endian: computer-friendly format.
