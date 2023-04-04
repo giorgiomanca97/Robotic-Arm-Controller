@@ -1,21 +1,42 @@
 #include "utils.h"
 
-float remap(float v, float a1, float b1, float a2, float b2) {
-  return a2 + (v - a1) / (b1 - a1) * (b2 - a2);
+// ==================================================
+// Functions
+// ==================================================
+
+float remap(float v, float a1, float b1, float a2, float b2, bool clamp = false) {
+  float res = a2 + (v - a1) / (b1 - a1) * (b2 - a2);
+  if(clamp){
+    if(a2 <= b2) {
+      return fmin(fmax(res, a2), b2);
+    } else {
+      return fmin(fmax(res, b2), a2);
+    }
+  } else {
+    return res;
+  }
 }
 
-float remap(int v, float a1, float b1, float a2, float b2) {
-  return remap((float)v, a1, b1, a2, b2);
+float remap( long v,  long a1,  long b1, float a2, float b2, bool clamp = false){
+  return remap((float) v, (float) a1, (float) b1, a2, b2, clamp);
 }
 
-int remap(float v, int a1, int b1, int a2, int b2) {
-  return (int)remap(v, (float)a1, (float)b1, (float)a2, (float)b2);
+long remap(float v, float a1, float b1,  long a2,  long b2, bool clamp = false){
+  return round(remap(v, a1, b1, (float) a2, (float) b2, clamp));
+}
+long remap( long v,  long a1,  long b1,  long a2,  long b2, bool clamp = false){
+  return round(remap((float) v, (float) a1, (float) b1, (float) a2, (float) b2, clamp));
 }
 
-int remap(int v, int a1, int b1, int a2, int b2) {
-  return (int)remap((float)v, (float)a1, (float)b1, (float)a2, (float)b2);
-}
 
+// ==================================================
+// Timer
+// ==================================================
+
+Timer::Timer(){
+  this->delta = 0;
+  this->time = 0;
+}
 
 Timer::Timer(unsigned long delta){
   this->delta = delta;
@@ -25,6 +46,10 @@ Timer::Timer(unsigned long delta){
 Timer::Timer(unsigned long delta, unsigned long time){
   this->delta = delta;
   this->time = time;
+}
+
+void Timer::setup(unsigned long delta){
+  this->delta = delta;
 }
 
 void Timer::reset(unsigned long time){
@@ -48,3 +73,4 @@ bool Timer::check(unsigned long time){
     return false;
   }
 }
+
