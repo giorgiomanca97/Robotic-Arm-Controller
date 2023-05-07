@@ -1,0 +1,3 @@
+classdef MsgIDLE < Message
+    
+end

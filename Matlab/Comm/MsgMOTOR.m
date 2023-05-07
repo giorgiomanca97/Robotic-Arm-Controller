@@ -1,0 +1,3 @@
+classdef MsgMOTOR < Message
+    
+end

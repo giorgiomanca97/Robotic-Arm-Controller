@@ -1,0 +1,3 @@
+classdef MsgERROR < Message
+    
+end

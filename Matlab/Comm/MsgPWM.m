@@ -1,0 +1,3 @@
+classdef MsgPWM < Message
+    
+end

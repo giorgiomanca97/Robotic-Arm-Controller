@@ -1,0 +1,3 @@
+classdef MsgROBOT < Message
+    
+end

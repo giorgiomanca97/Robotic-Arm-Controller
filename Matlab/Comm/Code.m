@@ -12,32 +12,42 @@ classdef Code < uint8
     end
 
     methods (Static)
-        function obj = from(value)
-            if(nargin < 1)
-                value = Code.IDLE;
+        function [code, res] = convert(value)
+            arguments
+                value (1,1) {mustBeInteger}
             end
 
             switch(uint8(value))
                 case Code.IDLE
-                    obj = Code.IDLE;
+                    code = Code.IDLE;
+                    res = true;
                 case Code.PWM
-                    obj = Code.PWM;
+                    code = Code.PWM;
+                    res = true;
                 case Code.REF
-                    obj = Code.REF;
+                    code = Code.REF;
+                    res = true;
                 case Code.ROBOT
-                    obj = Code.ROBOT;
+                    code = Code.ROBOT;
+                    res = true;
                 case Code.MOTOR
-                    obj = Code.MOTOR;
+                    code = Code.MOTOR;
+                    res = true;
                 case Code.PID
-                    obj = Code.PID;
+                    code = Code.PID;
+                    res = true;
                 case Code.ACKC
-                    obj = Code.ACKC;
+                    code = Code.ACKC;
+                    res = true;
                 case Code.ACKS
-                    obj = Code.ACKS;
+                    code = Code.ACKS;
+                    res = true;
                 case Code.ERROR
-                    obj = Code.ERROR;
+                    code = Code.ERROR;
+                    res = true;
                 otherwise
-                    obj = Code.ERROR;
+                    code = Code.ERROR;
+                    res = false;
             end
         end
     end
