@@ -71,26 +71,26 @@ classdef Header < handle
             dim = 1;
         end
 
-        function res = parse(obj, buffer)
+        function res = parse(obj, data)
             arguments
                 obj (1,1) Header;
-                buffer (1,:) uint8;
+                data (1,:) uint8;
             end
 
-            [code, res] = Code.convert(bitshift(buffer(1), -3, 'uint8'));
+            [code, res] = Code.convert(bitshift(data(1), -3, 'uint8'));
             if(res)
                 obj.Cod = code;
-                obj.Num = bitand(buffer(1), 0b00000111, 'uint8');
+                obj.Num = bitand(data(1), 0b00000111, 'uint8');
             end
         end
 
-        function buffer = bytes(obj)
+        function data = bytes(obj)
             arguments
                 obj (1,1) Header;
             end
 
-            buffer = zeros([1,1], 'uint8');
-            buffer(1) = bitor(bitshift(obj.Cod, 3, 'uint8'), obj.Num, 'uint8');
+            data = zeros([1,1], 'uint8');
+            data(1) = bitor(bitshift(obj.Cod, 3, 'uint8'), obj.Num, 'uint8');
         end
     end
 end

@@ -20,7 +20,7 @@ classdef Message < handle
     methods (Access = public)
         function code = getCode(obj)
             arguments
-                obj (1,1) Code;
+                obj (1,1) Message;
             end
 
             code = obj.Hdr.getCode();
@@ -28,7 +28,7 @@ classdef Message < handle
 
         function num = getNum(obj)
             arguments
-                obj (1,1) Code;
+                obj (1,1) Message;
             end
 
             num = obj.Hdr.getNum();
@@ -40,7 +40,7 @@ classdef Message < handle
     methods (Access = public)
         function res = setNum(obj, num)
             arguments
-                obj (1,1) Code;
+                obj (1,1) Message;
                 num (1,1) {mustBeInteger};
             end
             
@@ -53,33 +53,37 @@ classdef Message < handle
     methods (Access = public)
         function dim = bsize(obj)
             arguments
-                obj (1,1) Code;
+                obj (1,1) Message;
             end
 
             dim = obj.bsize_header() + obj.bsize_payload();
         end
 
-        function res = parse(obj, buffer)
+        function res = parse(obj, data)
             arguments
-                obj (1,1) Code;
-                buffer (1,:) uint8;
+                obj (1,1) Message;
+                data (1,:) uint8;
             end
             
-            res = obj.parse_header(buffer);
-            if(~res)
+            if(length(data) ~= obj.bsize())
+                res = false;
                 return;
+            end
+            
+            if(obj.parse_header(data(1:obj.bsize_header())))
+                res = obj.parse_payload(data(1+obj.bsize_header():end));
             else
-                res = obj.parse_payload(buffer);
+                res = false;
             end
         end
 
-        function buffer = bytes(obj)
+        function data = bytes(obj)
             arguments
-                obj (1,1) Code;
+                obj (1,1) Message;
             end
             
-            buffer = zeros([1, obj.bsize()], 'uint8');
-            buffer(:) = [obj.bytes_header(), obj.bytes_payload()];
+            data = zeros([1, obj.bsize()], 'uint8');
+            data(:) = [obj.bytes_header(), obj.bytes_payload()];
         end
     end
 
@@ -88,9 +92,9 @@ classdef Message < handle
     methods (Access = protected, Abstract)
         dim = bsize_payload(obj)
         
-        res = parse_payload(obj, buffer)
+        res = parse_payload(obj, data)
 
-        buffer = bytes_payload(obj)
+        data = bytes_payload(obj)
     end
     
 
@@ -98,32 +102,38 @@ classdef Message < handle
     methods (Access = private)
         function dim = bsize_header(obj)
             arguments
-                obj (1,1) Code;
+                obj (1,1) Message;
             end
 
             dim = obj.Hdr.bsize();
         end
 
-        function res = parse_header(obj, buffer)
+        function res = parse_header(obj, data)
             arguments
-                obj (1,1) Code;
-                buffer (1,:) uint8;
+                obj (1,1) Message;
+                data (1,:) uint8;
             end
             
-            [code, res] = Code.convert(bitshift(buffer(1), -3, 'uint8'));
-            if(res && code == obj.getCode())
-                obj.Hdr.setNum(bitand(buffer(1), 0b00000111, 'uint8'));
+            if(length(data) ~= obj.bsize_header())
+                res = false;
+                return;
+            end
+            
+            tmp = Header();
+            res = tmp.parse(data);
+            if(res && code == tmp.getCode())
+                res = obj.Hdr.parse(data);
             else
                 res = false;
             end
         end
 
-        function buffer = bytes_header(obj)
+        function data = bytes_header(obj)
             arguments
-                obj (1,1) Code;
+                obj (1,1) Message;
             end
             
-            buffer = obj.Hdr.bytes();
+            data = obj.Hdr.bytes();
         end
     end
 end

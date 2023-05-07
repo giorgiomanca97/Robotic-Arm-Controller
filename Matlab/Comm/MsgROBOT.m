@@ -7,7 +7,7 @@ classdef MsgROBOT < Message
     % Constructor
     methods (Access = public)
         function obj = MsgROBOT()
-
+            obj@Message(Code.ROBOT);
         end
     end
 
@@ -34,16 +34,16 @@ classdef MsgROBOT < Message
 
         end
         
-        function res = parse_payload(obj, buffer)
+        function res = parse_payload(obj, data)
             arguments
                 obj (1,1) MsgROBOT;
-                buffer (1,:) uint8;
+                data (1,:) uint8;
             end
 
 
         end
 
-        function buffer = bytes_payload(obj)
+        function data = bytes_payload(obj)
             arguments
                 obj (1,1) MsgROBOT;
             end
