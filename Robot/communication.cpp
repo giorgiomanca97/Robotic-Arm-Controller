@@ -153,18 +153,22 @@ bool Communication::Header::setNum(uint8_t num){
 
 bool Communication::Header::parse(uint8_t byte){
   Code code;
-  bool res = convert((byte & 0b11111000) >> 3, code);
+  if(!convert((byte & 0b11111000) >> 3, code)) return false;
   setCode(code);
   setNum(byte & 0b00000111);
-  return res;
+  return true;
 }
 
 uint8_t Communication::Header::byte(){
   return (((uint8_t) this->code) << 3) | num;
 }
 
+uint8_t Communication::Header::size(){
+  return 1;
+}
+
 uint8_t Communication::Header::from(uint8_t *buffer){
-  return parse(*buffer);
+  return parse(buffer[0]);
 }
 
 uint8_t Communication::Header::fill(uint8_t *buffer){
@@ -219,12 +223,12 @@ uint8_t Communication::Message::fill_payload(uint8_t *buffer){
 }
 
 uint8_t Communication::Message::size_header(){
-  return 1;
+  return header.size();
 }
 
 uint8_t Communication::Message::from_header(uint8_t *buffer){
   Code code;
-  bool res = convert((buffer[0] & 0b11111000) >> 3, code);
+  if(!convert((buffer[0] & 0b11111000) >> 3, code)) return 0;
   if(getCode() != code) return 0;
   setNum(buffer[1] & 0b00000111);
   return size_header();

@@ -59,6 +59,7 @@ public:
     bool parse(uint8_t byte);
     uint8_t byte();
 
+    uint8_t size();
     uint8_t from(uint8_t *buffer);
     uint8_t fill(uint8_t *buffer);
 
