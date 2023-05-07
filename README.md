@@ -26,7 +26,7 @@ There are four types of messages:
 - **Control messages** (*ctrl*): used by the master during control operation.
 - **Setup messages** (*setup*): used by the master to set slave's parameters.
 - **Response messages** (*ack*): used by the slave as acknowledgement.
-- **Error messages** (*error*): used by both the master and the slave in caso of errors.
+- **Error messages** (*error*): used by both the master and the slave in case of errors.
 
 <br><br>
 
