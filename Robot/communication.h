@@ -177,7 +177,7 @@ public:
     bool getInvertEncDir();
     bool getChangeEncDir();
     int8_t getEncDirection();
-    uint32_t getEncoderValue();
+    int32_t getEncoderValue();
 
     bool setIndex(uint8_t index);
     bool setChangeEncoder(bool value);
@@ -187,7 +187,7 @@ public:
     bool setInvertEncDir(bool value);
     bool setChangeEncDir(bool value);
     bool setEncDirection(int8_t dir);
-    bool setEncoderValue(uint32_t value);
+    bool setEncoderValue(int32_t value);
 
   protected:
     uint8_t size_payload();
@@ -196,7 +196,7 @@ public:
 
   private:
     uint8_t flags;
-    uint32_t encoder;
+    int32_t encoder;
   };
 
 

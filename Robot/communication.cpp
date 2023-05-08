@@ -426,7 +426,7 @@ int8_t Communication::MsgMOTOR::getEncDirection(){
   return getChangeEncDir() ? (getInvertEncDir() ? -1 : 1) : 0;
 }
 
-uint32_t Communication::MsgMOTOR::getEncoderValue(){
+int32_t Communication::MsgMOTOR::getEncoderValue(){
   return encoder;
 }
 
@@ -471,7 +471,7 @@ bool Communication::MsgMOTOR::setEncDirection(int8_t dir){
   return true;
 }
 
-bool Communication::MsgMOTOR::setEncoderValue(uint32_t value){
+bool Communication::MsgMOTOR::setEncoderValue(int32_t value){
   encoder = value;
   return true;
 }
@@ -481,15 +481,32 @@ uint8_t Communication::MsgMOTOR::size_payload(){
 }
 
 uint8_t Communication::MsgMOTOR::from_payload(uint8_t *buffer){
-  setSpinDirection((buffer[1] & (1 << 1)) ? ((buffer[1] & (1 << 0)) ? -1 : +1) : 0);
-  setEncDirection( (buffer[1] & (1 << 3)) ? ((buffer[1] & (1 << 2)) ? -1 : +1) : 0);
+  bool ec;
+  int16_t sd;
+  int16_t ed;
+  int32_t ev;
+  ec = (buffer[1] & (1 << 0));
+  sd = (buffer[1] & (1 << 2)) ? ((buffer[1] & (1 << 1)) ? -1 : +1) : 0;
+  ed = (buffer[1] & (1 << 3)) ? ((buffer[1] & (1 << 4)) ? -1 : +1) : 0;
+  memcpy((void *) &ev , (void *) (buffer + 1), 4);
+  setChangeEncoder(ec);
+  setSpinDirection(sd);
+  setEncDirection(ed);
+  setEncoderValue(ev);
   return size_payload();
 }
 
 uint8_t Communication::MsgMOTOR::fill_payload(uint8_t *buffer){
-  int16_t spin = getSpinDirection();
-  int16_t enc = getEncDirection();
-  buffer[1] = ((enc == 0) << 3) | ((enc == -1) << 2) | ((spin == 0) << 1) | ((spin == -1) << 0);
+  bool ec;
+  int16_t sd;
+  int16_t ed;
+  int32_t ev;
+  ec = getChangeEncoder();
+  sd = getSpinDirection();
+  ed = getEncDirection();
+  ev = getEncoderValue(); 
+  buffer[1] = ((ed == 0) << 4) | ((ed == -1) << 3) | ((sd == 0) << 2) | ((sd == -1) << 1) | (ec << 0);
+  memcpy((void *) (buffer + 1), (void *) &ev , 4);
   return size_payload();
 }
 
@@ -562,7 +579,12 @@ uint8_t Communication::MsgPID::size_payload(){
 }
 
 uint8_t Communication::MsgPID::from_payload(uint8_t *buffer){
-  float div, kp, ki, kd, pole, sat;
+  float div;
+  float kp;
+  float ki;
+  float kd;
+  float pole; 
+  float sat;
   memcpy((void *) &div , (void *) (buffer+ 1), 4);
   memcpy((void *) &kp  , (void *) (buffer+ 5), 4);
   memcpy((void *) &ki  , (void *) (buffer+ 9), 4);
@@ -579,7 +601,12 @@ uint8_t Communication::MsgPID::from_payload(uint8_t *buffer){
 }
 
 uint8_t Communication::MsgPID::fill_payload(uint8_t *buffer){
-  float div, kp, ki, kd, pole, sat;
+  float div;
+  float kp;
+  float ki;
+  float kd;
+  float pole; 
+  float sat;
   div = getPidDiv();
   kp = getPidKp();
   ki = getPidKi();
