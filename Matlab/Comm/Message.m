@@ -136,4 +136,60 @@ classdef Message < handle
             data = obj.Hdr.bytes();
         end
     end
+
+
+    % Utility
+    methods (Static, Access = public)
+        function data = valueToBytes(value, type)
+            arguments
+                value (1,1) {mustBeNumericOrLogical}
+                type (1,:) {mustBeTextScalar}
+            end
+            
+            [dim, cont] = Message.sizeof(type);            
+            data = zeros([1,dim], 'uint8');
+            int = typecast(cast(value, type), cont);
+            for k = 1:dim
+                tmp = cast(bitshift(int, 8*(1-k)), cont);
+                data(k) = uint8(bitand(tmp, 255));
+            end
+        end
+
+        function value = bytesToValue(data, type)
+            arguments
+                data (1,:) uint8;
+                type (1,:) {mustBeTextScalar}
+            end
+
+            [dim, cont] = Message.sizeof(type);
+            if(length(data) ~= dim)
+                error('Wrong data size');
+            end
+            int = uint32(0);
+            for k = 1:4
+                tmp = cast(bitshift(cast(data(k), cont), 8*(k-1)), cont);
+                int = cast(bitor(int, tmp), cont);
+            end
+            value = typecast(int, type);
+        end
+
+        function [dim, cont] = sizeof(type)
+            switch type
+              case {'double', 'int64', 'uint64'}
+                dim = 8;
+                cont = 'uint64';
+              case {'single', 'int32', 'uint32'}
+                dim = 4;
+                cont = 'uint32';
+              case {'char', 'int16', 'uint16'}
+                dim = 2;
+                cont = 'uint16';
+              case {'logical', 'int8', 'uint8'}
+                dim = 1;
+                cont = 'uint8';
+              otherwise
+                error('Class "%s" is not supported.', type);
+            end
+        end
+    end
 end

@@ -1,6 +1,6 @@
 classdef MsgACKC < Message
     properties (Access = private)
-        EndStops (1,1) uint8;
+        EndStops (1,8) logical;
         Deltas (1,8) int16;
     end
 
@@ -30,7 +30,7 @@ classdef MsgACKC < Message
             end
 
             if(index >= 1 && index <= obj.getCount())
-                es = bitand(obj.EndStops, bitshift(1, index - 1, 'uint8'), 'uint8');
+                es = obj.EndStops(index);
             else
                 es = false;
             end
@@ -70,7 +70,7 @@ classdef MsgACKC < Message
             end
 
             if(index >= 1 && index <= obj.getCount())
-                obj.EndStops = bitor(obj.EndStops, bitshift(value, index - 1, 'uint8'), 'uint8');
+                obj.EndStops(index) = value;
                 res = true;
             else
                 res = false;
