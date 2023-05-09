@@ -7,8 +7,12 @@ classdef MsgACKC < Message
     
     % Constructor
     methods (Access = public)
-        function obj = MsgACKC()
-            obj@Message(Code.ACKC);
+        function obj = MsgACKC(num)
+            if(nargin < 1)
+                num = 0;
+            end
+            
+            obj@Message(Code.ACKC, num);
         end
     end
 

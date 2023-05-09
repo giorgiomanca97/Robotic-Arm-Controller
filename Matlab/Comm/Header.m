@@ -7,8 +7,16 @@ classdef Header < handle
     
     % Constructor
     methods (Access = public)
-        function obj = Header()
+        function obj = Header(code, num)
+            if(nargin < 1)
+                code = Code.IDLE;
+            end
+            if(nargin < 2)
+                num = uint8(0);
+            end
 
+            obj.setCode(code);
+            obj.setNum(num);
         end
     end
     
