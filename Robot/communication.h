@@ -50,6 +50,9 @@ public:
   static bool isError(Code code);
 
   struct Header{
+    Header(Code code, uint8_t num);
+    Header() : Header(Code::IDLE, 0) {}
+
     Code getCode();
     uint8_t getNum();
 
@@ -70,7 +73,8 @@ public:
 
   
   struct Message{
-    Message(Code code);
+    Message(Code code, uint8_t num);
+    Message(Code code) : Message(code, 0) {}
 
     Code getCode();
     uint8_t getNum();
@@ -97,6 +101,7 @@ public:
 
   struct MsgIDLE : public Message{
     MsgIDLE() : Message(Code::IDLE) {}
+    MsgIDLE(uint8_t num) : Message(Code::IDLE, num) {}
 
     uint8_t getCount();
     
@@ -111,6 +116,7 @@ public:
 
   struct MsgPWM : public Message{
     MsgPWM() : Message(Code::PWM) {}
+    MsgPWM(uint8_t num) : Message(Code::PWM, num) {}
 
     uint8_t getCount();
     int16_t getPwm(uint8_t index);
@@ -130,6 +136,7 @@ public:
 
   struct MsgREF : public Message{
     MsgREF() : Message(Code::REF) {}
+    MsgREF(uint8_t num) : Message(Code::REF, num) {}
 
     uint8_t getCount();
     int16_t getDeltaEnc(uint8_t index);
@@ -149,6 +156,7 @@ public:
 
   struct MsgROBOT : public Message{
     MsgROBOT() : Message(Code::ROBOT) {}
+    MsgROBOT(uint8_t num) : Message(Code::ROBOT, num) {}
 
     uint8_t getCount();
     uint32_t getTimeSampling();
@@ -168,6 +176,7 @@ public:
 
   struct MsgMOTOR : public Message{
     MsgMOTOR() : Message(Code::MOTOR) {}
+    MsgMOTOR(uint8_t num) : Message(Code::MOTOR, num) {}
     
     uint8_t getIndex();
     bool getChangeEncoder();
@@ -202,6 +211,7 @@ public:
 
   struct MsgPID : public Message{
     MsgPID() : Message(Code::PID) {}
+    MsgPID(uint8_t num) : Message(Code::PID, num) {}
     
     uint8_t getIndex();
     float getPidDiv();
@@ -236,6 +246,7 @@ public:
 
   struct MsgACKC : public Message{
     MsgACKC() : Message(Code::ACKC) {}
+    MsgACKC(uint8_t num) : Message(Code::ACKC, num) {}
 
     uint8_t getCount();
     bool getEndStop(uint8_t index);
@@ -258,6 +269,7 @@ public:
 
   struct MsgACKS : public Message{
     MsgACKS() : Message(Code::ACKS) {}
+    MsgACKS(uint8_t num) : Message(Code::ACKS, num) {}
 
     uint8_t getCount();
     uint8_t getIndex();
@@ -274,6 +286,7 @@ public:
 
   struct MsgERROR : public Message{
     MsgERROR() : Message(Code::ERROR) {}
+    MsgERROR(uint8_t num) : Message(Code::ERROR, num) {}
 
     uint8_t getCount();
     uint8_t getIndex();

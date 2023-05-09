@@ -129,6 +129,11 @@ static void Communication::flush(){
 
 // ===== Header =====
 
+Communication::Header::Header(Communication::Code code, uint8_t num) {
+  setCode(code);
+  setNum(num);
+}
+
 Communication::Code Communication::Header::getCode(){
   return this->code;
 }
@@ -178,8 +183,9 @@ uint8_t Communication::Header::fill(uint8_t *buffer){
 
 // ===== Message =====
 
-Communication::Message::Message(Code code){
+Communication::Message::Message(Code code, uint8_t num){
   header.setCode(code);
+  header.setNum(num);
 }
 
 Communication::Code Communication::Message::getCode(){
@@ -805,6 +811,7 @@ void RobotComm::cycle(uint32_t time_us){
         switch(code){
           case Communication::Code::IDLE:
             Communication::MsgIDLE msg_idle;
+            msg_idle.setCount(robot.getSize());
             res = Communication::rcv(&msg_idle, &timeout);
             if(!res) break;
             robot.setStatus(Robot::Status::Idle);
@@ -812,6 +819,7 @@ void RobotComm::cycle(uint32_t time_us){
 
           case Communication::Code::PWM:
             Communication::MsgPWM msg_pwm;
+            msg_pwm.setCount(robot.getSize());
             res = Communication::rcv(&msg_pwm, &timeout);
             if(!res) break;
             robot.setStatus(Robot::Status::Pwm);
@@ -822,6 +830,7 @@ void RobotComm::cycle(uint32_t time_us){
 
           case Communication::Code::REF:
             Communication::MsgREF msg_ref;
+            msg_ref.setCount(robot.getSize());
             res = Communication::rcv(&msg_ref, &timeout);
             if(!res) break;
             robot.setStatus(Robot::Status::Ref);
