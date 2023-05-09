@@ -11,8 +11,12 @@ classdef MsgMOTOR < Message
     
     % Constructor
     methods (Access = public)
-        function obj = MsgMOTOR()
-            obj@Message(Code.MOTOR);
+        function obj = MsgMOTOR(num)
+            if(nargin < 1)
+                num = 0;
+            end
+            
+            obj@Message(Code.MOTOR, num);
         end
     end
 

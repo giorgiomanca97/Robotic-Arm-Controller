@@ -11,6 +11,40 @@ classdef Code < uint8
         ERROR(31)
     end
 
+    methods
+        function res = isCtrl(obj)
+            arguments
+                obj (1,1) Code;
+            end
+
+            res = obj == Code.IDLE || obj == Code.PWM || obj == Code.REF;
+        end
+
+        function res = isSetup(obj)
+            arguments
+                obj (1,1) Code;
+            end
+
+            res = obj == Code.ROBOT || obj == Code.MOTOR || obj == Code.PID;
+        end
+
+        function res = isAck(obj)
+            arguments
+                obj (1,1) Code;
+            end
+
+            res = obj == Code.ACKC || obj == Code.ACKS;
+        end
+
+        function res = isError(obj)
+            arguments
+                obj (1,1) Code;
+            end
+
+            res = obj == Code.ERROR;
+        end
+    end
+
     methods (Static)
         function [code, res] = convert(value)
             arguments

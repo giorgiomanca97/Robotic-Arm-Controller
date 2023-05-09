@@ -6,8 +6,12 @@ classdef MsgPWM < Message
     
     % Constructor
     methods (Access = public)
-        function obj = MsgPWM()
-            obj@Message(Code.PWM);
+        function obj = MsgPWM(num)
+            if(nargin < 1)
+                num = 0;
+            end
+            
+            obj@Message(Code.PWM, num);
         end
     end
 

@@ -6,8 +6,12 @@ classdef MsgACKS < Message
     
     % Constructor
     methods (Access = public)
-        function obj = MsgACKS()
-            obj@Message(Code.ACKS);
+        function obj = MsgACKS(num)
+            if(nargin < 1)
+                num = 0;
+            end
+            
+            obj@Message(Code.ACKS, num);
         end
     end
 

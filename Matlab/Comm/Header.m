@@ -3,7 +3,7 @@ classdef Header < handle
         Cod (1,1) Code;
         Num (1,1) uint8;
     end
-    
+
     
     % Constructor
     methods (Access = public)

@@ -6,12 +6,13 @@ classdef Message < handle
 
     % Constructor
     methods (Access = public)
-        function obj = Message(code)
-            arguments
-                code (1,1) Code;
+        function obj = Message(code, num)
+            if(nargin < 2)
+                num = 0;
             end
             
             obj.Hdr.setCode(code);
+            obj.Hdr.setNum(num);
         end
     end
     

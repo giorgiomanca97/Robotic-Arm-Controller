@@ -11,8 +11,12 @@ classdef MsgPID < Message
     
     % Constructor
     methods (Access = public)
-        function obj = MsgPID()
-            obj@Message(Code.PID);
+        function obj = MsgPID(num)
+            if(nargin < 1)
+                num = 0;
+            end
+            
+            obj@Message(Code.PID, num);
         end
     end
 

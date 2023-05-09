@@ -6,8 +6,12 @@ classdef MsgROBOT < Message
     
     % Constructor
     methods (Access = public)
-        function obj = MsgROBOT()
-            obj@Message(Code.ROBOT);
+        function obj = MsgROBOT(num)
+            if(nargin < 1)
+                num = 0;
+            end
+            
+            obj@Message(Code.ROBOT, num);
         end
     end
 

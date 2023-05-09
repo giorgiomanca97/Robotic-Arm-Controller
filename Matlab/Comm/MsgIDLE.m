@@ -6,8 +6,12 @@ classdef MsgIDLE < Message
     
     % Constructor
     methods (Access = public)
-        function obj = MsgIDLE()
-            obj@Message(Code.IDLE);
+        function obj = MsgIDLE(num)
+            if(nargin < 1)
+                num = 0;
+            end
+            
+            obj@Message(Code.IDLE, num);
         end
     end
 

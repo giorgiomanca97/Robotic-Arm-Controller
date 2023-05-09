@@ -6,8 +6,12 @@ classdef MsgERROR < Message
     
     % Constructor
     methods (Access = public)
-        function obj = MsgERROR()
-            obj@Message(Code.ERROR);
+        function obj = MsgERROR(num)
+            if(nargin < 1)
+                num = 0;
+            end
+            
+            obj@Message(Code.ERROR, num);
         end
     end
 

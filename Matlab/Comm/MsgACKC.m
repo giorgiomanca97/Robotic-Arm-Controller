@@ -26,7 +26,7 @@ classdef MsgACKC < Message
 
             count = obj.getNum() + 1;
         end
-        
+
         function es = getEndStop(obj, index)
             arguments
                 obj (1,1) MsgACKC;

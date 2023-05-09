@@ -6,8 +6,12 @@ classdef MsgREF < Message
     
     % Constructor
     methods (Access = public)
-        function obj = MsgREF()
-            obj@Message(Code.REF);
+        function obj = MsgREF(num)
+            if(nargin < 1)
+                num = 0;
+            end
+            
+            obj@Message(Code.REF, num);
         end
     end
 
