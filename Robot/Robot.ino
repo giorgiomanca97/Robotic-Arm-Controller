@@ -177,19 +177,6 @@ void setup()
 {
   toggle.set(true);
 
-  digitalWrite(MOTOR_1_CHA, HIGH);
-  digitalWrite(MOTOR_1_CHB, HIGH);
-  digitalWrite(MOTOR_2_CHA, HIGH);
-  digitalWrite(MOTOR_2_CHB, HIGH);
-  digitalWrite(MOTOR_3_CHA, HIGH);
-  digitalWrite(MOTOR_3_CHB, HIGH);
-  digitalWrite(MOTOR_4_CHA, HIGH);
-  digitalWrite(MOTOR_4_CHB, HIGH);
-  digitalWrite(MOTOR_5_CHA, HIGH);
-  digitalWrite(MOTOR_5_CHB, HIGH);
-  digitalWrite(MOTOR_6_CHA, HIGH);
-  digitalWrite(MOTOR_6_CHB, HIGH);
-
   PWMfreq::set(PWMfreq::MegaTimer3::FREQ_3921_16);
   PWMfreq::set(PWMfreq::MegaTimer4::FREQ_3921_16);
 
