@@ -341,7 +341,7 @@ void Robot::initPID(uint8_t index, float pole, float sat){
   if(index < size){
     this->pids_pole[index] = pole;
     this->pids_sat[index] = sat;
-    this->pids[index].init((float) ts / 1000000.0, pole, sat, true);
+    this->pids[index].init((float) ts / 1000000.0, 0.0, sat, 0.0, 0.0, 0.0, pole, true);
   }
 }
 
