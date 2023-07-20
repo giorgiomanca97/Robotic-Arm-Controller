@@ -153,8 +153,8 @@ Payload of 24 bytes -> message of 25 bytes.
 |   6-9   | Float (little-endian) for PID proportional coefficient.                                 |
 |  10-13  | Float (little-endian) for PID integral coefficient.                                     |
 |  14-17  | Float (little-endian) for PID derivative coefficient.                                   |
-|  18-21  | Float (little-endian) for PID dirty derivative pole.                                    |
-|  20-25  | Float (little-endian) for PID integral saturation.                                      |
+|  18-21  | Float (little-endian) for PID integral saturation.                                      |
+|  20-25  | Float (little-endian) for PID dirty derivative pole.                                    |
 
 Note: PID values are expressed in continuos time domain (discretization made on-board according to microcontroller time sampling).
 
