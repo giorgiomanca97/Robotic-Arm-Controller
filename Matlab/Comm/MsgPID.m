@@ -4,8 +4,8 @@ classdef MsgPID < Message
         Kp (1,1) single;
         Ki (1,1) single;
         Kd (1,1) single;
-        Pole (1,1) single;
         Sat (1,1) single;
+        Pole (1,1) single;
     end
 
     
@@ -62,14 +62,6 @@ classdef MsgPID < Message
 
             kd = obj.Kd;
         end
-
-        function pole = getPidPole(obj)
-            arguments
-                obj (1,1) MsgPID;
-            end
-
-            pole = obj.Pole;
-        end
         
         function sat = getPidSat(obj)
             arguments
@@ -77,6 +69,14 @@ classdef MsgPID < Message
             end
 
             sat = obj.Sat;
+        end
+
+        function pole = getPidPole(obj)
+            arguments
+                obj (1,1) MsgPID;
+            end
+
+            pole = obj.Pole;
         end
     end
 
@@ -132,16 +132,6 @@ classdef MsgPID < Message
             res = true;
         end
 
-        function res = setPidPole(obj, pole)
-            arguments
-                obj (1,1) MsgPID;
-                pole (1,1) {mustBeNumeric}
-            end
-
-            obj.Pole = pole;
-            res = true;
-        end
-        
         function res = setPidSat(obj, sat)
             arguments
                 obj (1,1) MsgPID;
@@ -149,6 +139,16 @@ classdef MsgPID < Message
             end
 
             obj.Sat = sat;
+            res = true;
+        end
+
+        function res = setPidPole(obj, pole)
+            arguments
+                obj (1,1) MsgPID;
+                pole (1,1) {mustBeNumeric}
+            end
+
+            obj.Pole = pole;
             res = true;
         end
     end
@@ -179,8 +179,8 @@ classdef MsgPID < Message
             obj.setPidKp(  Message.bytesToValue(data( 5: 8), 'single'));
             obj.setPidKi(  Message.bytesToValue(data( 9:12), 'single'));
             obj.setPidKd(  Message.bytesToValue(data(13:16), 'single'));
-            obj.setPidPole(Message.bytesToValue(data(17:20), 'single'));
-            obj.setPidSat( Message.bytesToValue(data(21:24), 'single'));
+            obj.setPidSat( Message.bytesToValue(data(17:20), 'single'));
+            obj.setPidPole(Message.bytesToValue(data(21:24), 'single'));
         end
 
         function data = bytes_payload(obj)
@@ -194,8 +194,8 @@ classdef MsgPID < Message
             data( 5: 8) = Message.valueToBytes(obj.getPidKp()  , 'single');
             data( 9:12) = Message.valueToBytes(obj.getPidKi()  , 'single');
             data(13:16) = Message.valueToBytes(obj.getPidKd()  , 'single');
-            data(17:20) = Message.valueToBytes(obj.getPidPole(), 'single');
-            data(21:24) = Message.valueToBytes(obj.getPidSat() , 'single');
+            data(17:20) = Message.valueToBytes(obj.getPidSat() , 'single');
+            data(21:24) = Message.valueToBytes(obj.getPidPole(), 'single');
         end
     end
 end

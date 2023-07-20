@@ -88,7 +88,7 @@ classdef Robot < serialport
             res = true;
         end
 
-        function res = setup_pid(obj, index, div, kp, ki, kd, pole, sat)
+        function res = setup_pid(obj, index, div, kp, ki, kd, sat, pole)
             %snd
             %rcv
             obj.Encs = obj.Encs + delta;
