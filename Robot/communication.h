@@ -218,16 +218,16 @@ public:
     float getPidKp();
     float getPidKi();
     float getPidKd();
-    float getPidPole();
     float getPidSat();
+    float getPidPole();
 
     bool setIndex(uint8_t index);
     bool setPidDiv(float value);
     bool setPidKp(float value);
     bool setPidKi(float value);
     bool setPidKd(float value);
-    bool setPidPole(float value);
     bool setPidSat(float value);
+    bool setPidPole(float value);
 
   protected:
     uint8_t size_payload();
@@ -239,8 +239,8 @@ public:
     float kp;
     float ki;
     float kd;
-    float pole;
     float sat;
+    float pole;
   };
 
 

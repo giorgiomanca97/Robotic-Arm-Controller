@@ -253,7 +253,7 @@ public:
   void setMotor(uint8_t index, Motor &motor);     // Set robot's motor specified by index
   void invertMotor(uint8_t index, bool inv);      // Invert motor's spin direction specified by index
 
-  void initPID(uint8_t index, float pole, float sat);                     // Set PID properties for motor specified by index
+  void initPID(uint8_t index, float sat, float pole);                     // Set PID properties for motor specified by index
   void setupPID(uint8_t index, float div, float kp, float ki, float kd);  // Set PID gains for motor specified by index
   void resetPID(uint8_t index, float xi, float xd);                       // Set PID state for motor specified by index
   void resetPID(uint8_t index);                                           // Reset PID state for motor specified by index
@@ -304,12 +304,12 @@ private:
 
   Status status;          // Robot status
 
-  float *pids_div;        // Encoders error dividers
-  float *pids_kp;         // Encoders error dividers
-  float *pids_ki;         // Encoders error dividers
-  float *pids_kd;         // Encoders error dividers
-  float *pids_pole;       // Encoders error dividers
-  float *pids_sat;        // Encoders error dividers
+  float *pids_div;        // Encoders error divider
+  float *pids_kp;         // PID's P coefficient
+  float *pids_ki;         // PID's I coefficient
+  float *pids_kd;         // PID's D coefficient
+  float *pids_sat;        // PID integral saturation
+  float *pids_pole;       // PID derivative filter pole
   
   long    *mot_encs;      // Motors' encoders values
   int16_t *mot_pwms;      // Motors' PWMs current values

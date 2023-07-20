@@ -538,12 +538,12 @@ float Communication::MsgPID::getPidKd(){
   return kd;
 }
 
-float Communication::MsgPID::getPidPole(){
-  return pole;
-}
-
 float Communication::MsgPID::getPidSat(){
   return sat;
+}
+
+float Communication::MsgPID::getPidPole(){
+  return pole;
 }
 
 bool Communication::MsgPID::setIndex(uint8_t index){
@@ -570,13 +570,13 @@ bool Communication::MsgPID::setPidKd(float value){
   return true;
 }
 
-bool Communication::MsgPID::setPidPole(float value){
-  pole = value;
+bool Communication::MsgPID::setPidSat(float value){
+  sat = value;
   return true;
 }
 
-bool Communication::MsgPID::setPidSat(float value){
-  sat = value;
+bool Communication::MsgPID::setPidPole(float value){
+  pole = value;
   return true;
 }
 
@@ -589,20 +589,20 @@ uint8_t Communication::MsgPID::from_payload(uint8_t *buffer){
   float kp;
   float ki;
   float kd;
-  float pole; 
   float sat;
+  float pole; 
   memcpy((void *) &div , (void *) (buffer+ 1), 4);
   memcpy((void *) &kp  , (void *) (buffer+ 5), 4);
   memcpy((void *) &ki  , (void *) (buffer+ 9), 4);
   memcpy((void *) &kd  , (void *) (buffer+13), 4);
-  memcpy((void *) &pole, (void *) (buffer+17), 4);
-  memcpy((void *) &sat , (void *) (buffer+21), 4);
+  memcpy((void *) &sat , (void *) (buffer+17), 4);
+  memcpy((void *) &pole, (void *) (buffer+21), 4);
   setPidDiv(div);
   setPidKp(kp);
   setPidKi(ki);
   setPidKd(kd);
-  setPidPole(pole);
   setPidSat(sat);
+  setPidPole(pole);
   return size_payload();
 }
 
@@ -611,20 +611,20 @@ uint8_t Communication::MsgPID::fill_payload(uint8_t *buffer){
   float kp;
   float ki;
   float kd;
-  float pole; 
   float sat;
+  float pole; 
   div = getPidDiv();
   kp = getPidKp();
   ki = getPidKi();
   kd = getPidKd();
-  pole = getPidPole();
   sat = getPidSat();
+  pole = getPidPole();
   memcpy((void *) (buffer+ 1), (void *) &div , 4);
   memcpy((void *) (buffer+ 5), (void *) &kp  , 4);
   memcpy((void *) (buffer+ 9), (void *) &ki  , 4);
   memcpy((void *) (buffer+13), (void *) &kd  , 4);
-  memcpy((void *) (buffer+17), (void *) &pole, 4);
-  memcpy((void *) (buffer+21), (void *) &sat , 4);
+  memcpy((void *) (buffer+17), (void *) &sat , 4);
+  memcpy((void *) (buffer+21), (void *) &pole, 4);
   return size_payload();
 }
 
@@ -888,7 +888,7 @@ void RobotComm::cycle(uint32_t time_us){
           Communication::MsgPID msg_pid;
           res = Communication::rcv(&msg_pid, &timeout);
           if(!res) break;
-          robot.initPID(msg_motor.getIndex(), msg_pid.getPidPole(), msg_pid.getPidSat());
+          robot.initPID(msg_motor.getIndex(), msg_pid.getPidSat(),  msg_pid.getPidPole());
           robot.setupPID(msg_motor.getIndex(), msg_pid.getPidDiv(), msg_pid.getPidKp(), msg_pid.getPidKi(), msg_pid.getPidKd());
           robot.resetPID(msg_motor.getIndex());
           msg_acks.setIndex(msg_motor.getIndex());

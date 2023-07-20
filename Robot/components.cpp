@@ -255,8 +255,8 @@ Robot::Robot(PinControl &enable, uint8_t size, uint32_t ts_us)
   this->pids_kp = malloc(size * sizeof(float));
   this->pids_ki = malloc(size * sizeof(float));
   this->pids_kd = malloc(size * sizeof(float));
-  this->pids_pole = malloc(size * sizeof(float));
   this->pids_sat = malloc(size * sizeof(float));
+  this->pids_pole = malloc(size * sizeof(float));
 
   this->mot_encs = malloc(size * sizeof(long));
   this->mot_pwms = malloc(size * sizeof(int16_t));
@@ -269,8 +269,8 @@ Robot::Robot(PinControl &enable, uint8_t size, uint32_t ts_us)
     this->pids_kp[i] = 0.0;
     this->pids_ki[i] = 0.0;
     this->pids_kd[i] = 0.0;
-    this->pids_pole[i] = 1.0;
     this->pids_sat[i] = 0.0;
+    this->pids_pole[i] = 1.0;
     this->mot_encs[i] = 0;
     this->mot_pwms[i] = 0;
     this->mot_refs[i] = 0;
@@ -288,8 +288,8 @@ Robot::~Robot() {
   free(this->pids_kp);
   free(this->pids_ki);
   free(this->pids_kd);
-  free(this->pids_pole);
   free(this->pids_sat);
+  free(this->pids_pole);
   free(this->mot_encs);
   free(this->mot_pwms);
   free(this->mot_refs);
@@ -324,7 +324,7 @@ uint32_t Robot::getTimeSampling(){
 void Robot::setTimeSampling(uint32_t ts_us){
   this->ts = ts_us;
   for(uint8_t i = 0; i < size; i++){
-    initPID(i, pids_pole[i], pids_sat[i]);
+    initPID(i, pids_sat[i], pids_pole[i]);
     setupPID(i, pids_div[i], pids_kp[i], pids_ki[i], pids_kd[i]);
   }
 }
@@ -337,10 +337,10 @@ void Robot::invertMotor(uint8_t index, bool inv){
   if(index < size) this->motors[index]->invertMotor(inv);
 }
 
-void Robot::initPID(uint8_t index, float pole, float sat){
+void Robot::initPID(uint8_t index, float sat, float pole){
   if(index < size){
-    this->pids_pole[index] = pole;
     this->pids_sat[index] = sat;
+    this->pids_pole[index] = pole;
     this->pids[index].init((float) ts / 1000000.0, 0.0, sat, 0.0, 0.0, 0.0, pole, true);
   }
 }
