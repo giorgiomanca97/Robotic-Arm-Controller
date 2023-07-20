@@ -1,15 +1,24 @@
-classdef Robot < serialport
+classdef Robot < handle
     properties (Access = private)
-        N;      % Robot size
-        Ends;   % Robot endstops value
-        Encs;   % Robot encoders value
-        Refs;   % Target encoders value
+        Comm Communication;         % Serial communication
+        N (1,1) uint8;              % Robot size
+        Ends (1,:) logical;         % Robot endstops value
+        Encs (1,:) int64;           % Robot encoders value
+        Timeout (1,1) uint64;       % Target encoders value
     end
     
     
     % Constructor
     methods
-        function obj = Robot(n, port, baudrate)
+        function obj = Robot(n, ts_us, varargin)
+            arguments
+                n (1,1) {mustBeInteger, mustBePositive};
+                ts_us (1,1) {mustBeInteger, mustBeNonnegative};
+            end
+            arguments (Repeating)
+                varargin;
+            end
+
             if(n <= 0)
                 error("Number of motors must be at least 1.");
             end
@@ -18,13 +27,13 @@ classdef Robot < serialport
                 error("The protocol support up to 8 motors.");
             end
             
-            obj = obj@serialport(port, baudrate);
-            obj.flush();
+            obj.Comm = Communication(varargin{:});
+            obj.Comm.flush();
 
             obj.N = uint8(n);
             obj.Ends = false([obj.N, 1]);
             obj.Encs = zeros([obj.N, 1], 'int64');
-            obj.Refs = zeros([obj.N, 1], 'int64');
+            obj.Timeout = uint64(ts_us);
             
         end
     end
@@ -33,15 +42,27 @@ classdef Robot < serialport
     % Getters
     methods (Access = public)
         function n = getSize(obj)
+            arguments
+                obj (1,1) Robot;
+            end
+
             n = obj.N;
         end
         
         function endstops = getEndstops(obj)
-            endstops = obj.Ends;
+            arguments
+                obj (1,1) Robot;
+            end
+
+            endstops = obj.Ends(1, obj.N);
         end
 
         function encoders = getEncoders(obj)
-            encoders = obj.Encs;
+            arguments
+                obj (1,1) Robot;
+            end
+
+            encoders = obj.Encs(1, obj.N);
         end
     end
     
@@ -49,51 +70,176 @@ classdef Robot < serialport
     % Communication
     methods (Access = public)
         function res = ctrl_idle(obj)
-            %snd
-            %rcv
-            obj.Encs = obj.Encs + delta;
-            obj.Ends = switches;
-            res = true;
+            arguments
+                obj (1,:) Robot;
+            end
+
+            msg = MsgIDLE();
+            msg.setCount(obj.N);
+
+            obj.Comm.snd(msg);
+            [res, msg] = obj.Comm.rcv(obj.Timeout);
+
+            if(res && msg.getCode() == Code.ACKC && msg.getCount() == obj.N)
+                for k = 1:obj.N
+                    obj.Encs(k) = obj.Encs(k) + msg.getDeltaEnc(k);
+                    obj.Ends(k) = msg.getEndStop(k);
+                end
+            else
+                res = false;
+                obj.Comm.flush();
+            end
         end
 
         function res = ctrl_pwm(obj, pwms)
-            %snd
-            %rcv
-            obj.Encs = obj.Encs + delta;
-            obj.Ends = switches;
-            res = true;
+            arguments
+                obj (1,1) Robot;
+                pwms (1,:) {mustBeNumeric};
+            end
+
+            if(length(pwms) ~= obj.N)
+                error("Wrong pwms length.");
+            end
+
+            msg = MsgPWM();
+            msg.setCount(obj.N);
+            for k = 1:obj.N
+                msg.setPwm(k, int16(pwms(k)));
+            end
+
+            obj.Comm.snd(msg);
+            [res, msg] = obj.Comm.rcv(obj.Timeout);
+
+            if(res && msg.getCode() == Code.ACKC && msg.getCount() == obj.N)
+                for k = 1:obj.N
+                    obj.Encs(k) = obj.Encs(k) + msg.getDeltaEnc(k);
+                    obj.Ends(k) = msg.getEndStop(k);
+                end
+            else
+                res = false;
+                obj.Comm.flush();
+            end
         end
 
         function res = ctrl_ref(obj, encs)
-            %snd
-            %rcv
-            obj.Encs = obj.Encs + delta;
-            obj.Ends = switches;
-            res = true;
+            arguments
+                obj (1,1) Robot;
+                encs (1,:) {mustBeNumeric};
+            end
+
+            if(length(encs) ~= obj.N)
+                error("Wrong encs length.");
+            end
+
+            msg = MsgREF();
+            msg.setCount(obl.N);
+            for k = 1:obj.N
+                msg.setDeltaEnc(k, int64(encs(k)) - obj.Encs(k));
+            end
+
+            obj.Comm.snd(msg);
+            [res, msg] = obj.Comm.rcv(obj.Timeout);
+            
+            if(res && msg.getCode() == Code.ACKC && msg.getCount() == obj.N)
+                for k = 1:obj.N
+                    obj.Encs(k) = obj.Encs(k) + msg.getDeltaEnc(k);
+                    obj.Ends(k) = msg.getEndStop(k);
+                end
+            else
+                res = false;
+                obj.Comm.flush();
+            end
         end
 
-        function res = setup_robot(obj, timesampling)
-            %snd
-            %rcv
-            obj.Encs = obj.Encs + delta;
-            obj.Ends = switches;
-            res = true;
+        function res = setup_robot(obj, ts_us)
+            arguments
+                obj (1,1) Robot;
+                ts_us (1,1) {mustBeNumeric, mustBeNonnegative};
+            end
+
+            msg = MsgROBOT();
+            msg.setCount(obl.N);
+            msg.setTimeSampling(ts_us);
+            ts_us = msg.getTimeSampling();
+
+            obj.Comm.snd(msg);
+            [res, msg] = obj.Comm.rcv(obj.Timeout);
+            
+            if(res && msg.getCode() == Code.ACKS && msg.getCount() == obj.N)
+                obj.Timeout(1) = ts_us;
+            else
+                res = false;
+                obj.Comm.flush();
+            end
         end
 
         function res = setup_motor(obj, index, spin_dir, enc_dir, enc)
-            %snd
-            %rcv
-            obj.Encs = obj.Encs + delta;
-            obj.Ends = switches;
-            res = true;
+            arguments
+                obj (1,1) Robot;
+                index (1,1) {mustBeInteger, mustBeNonnegative};
+                spin_dir (1,1) {mustBeInteger};
+                enc_dir (1,1) {mustBeInteger};
+                enc (1,1) {mustBeInteger};
+            end
+
+            if(index < 1 || index > obj.N)
+                error("Index out of bound.")
+            end
+
+            msg = MsgMOTOR();
+            msg.setIndex(index-1);
+            msg.setChangeSpinDir(spin_dir ~= 0);
+            msg.setInvertSpinDir(spin_dir < 0);
+            msg.setChangeEncDir(enc_dir ~= 0);
+            msg.setInvertEncDir(enc_dir < 0);
+            msg.setChangeEncoder(true);
+            msg.setEncoderValue(enc);
+            enc = msg.getEncoderValue();
+
+            obj.Comm.snd(msg);
+            [res, msg] = obj.Comm.rcv(obj.Timeout);
+            
+            if(res && msg.getCode() == Code.ACKS && msg.getIndex() == (index-1))
+                obj.Encs(index) = enc;
+            else
+                res = false;
+                obj.Comm.flush();
+            end
         end
 
         function res = setup_pid(obj, index, div, kp, ki, kd, sat, pole)
-            %snd
-            %rcv
-            obj.Encs = obj.Encs + delta;
-            obj.Ends = switches;
-            res = true;
+            arguments
+                obj (1,1) Robot;
+                index (1,1) {mustBeInteger, mustBeNonnegative};
+                div (1,1) {mustBeNumeric};
+                kp (1,1) {mustBeNumeric};
+                ki (1,1) {mustBeNumeric};
+                kd (1,1) {mustBeNumeric};
+                sat (1,1) {mustBeNumeric};
+                pole (1,1) {mustBeNumeric};
+            end
+
+            if(index < 1 || index > obj.N)
+                error("Index out of bound.")
+            end
+
+            msg = MsgPID();
+            msg.setIndex(index-1);
+            msg.setPidDiv(div);
+            msg.setPidKp(kp);
+            msg.setPidKi(ki);
+            msg.setPidKd(kd);
+            msg.setPidSat(sat);
+            msg.setPidPole(pole);
+
+            obj.Comm.snd(msg);
+            [res, msg] = obj.Comm.rcv(obj.Timeout);
+            
+            if(res && msg.getCode() == Code.ACKS && msg.getIndex() == (index-1))
+            else
+                res = false;
+                obj.Comm.flush();
+            end
         end        
     end
 end

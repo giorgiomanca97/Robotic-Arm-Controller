@@ -9,8 +9,8 @@ classdef Communication
     methods
         function obj = Communication(varargin)
             obj.Serial = serialport(varargin{:});
-            obj.PeekByte(1,1) = uint8(0);
-            obj.Peeked(1,1) = false;
+            obj.PeekByte(1) = uint8(0);
+            obj.Peeked(1) = false;
         end
     end
 
@@ -98,7 +98,7 @@ classdef Communication
 
             if(obj.Serial.NumBytesAvailable >= msg.bsize())
                 res = msg.parse(obj.Serial.read(msg.bsize(), 'uint8'));
-                obj.Peeked(1,1) = false;
+                obj.Peeked(1) = false;
             else
                 res = false;
             end
@@ -120,7 +120,7 @@ classdef Communication
                 obj (1,1) Communication;
             end
             
-            obj.Peeked(1,1) = false;
+            obj.Peeked(1) = false;
             obj.Serial.flush();
         end
     end
