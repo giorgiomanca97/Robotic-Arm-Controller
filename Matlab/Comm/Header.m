@@ -38,6 +38,22 @@ classdef Header < handle
 
             num = obj.Num;
         end
+
+        function count = getCount(obj)
+            arguments
+                obj (1,1) Header;
+            end
+
+            count = obj.getNum() + 1;
+        end
+
+        function index = getIndex(obj)
+            arguments
+                obj (1,1) Header;
+            end
+
+            index = obj.getNum();
+        end
     end
     
     
@@ -65,6 +81,24 @@ classdef Header < handle
             else
                 res = false;
             end
+        end
+
+        function res = setCount(obj, count)
+            arguments
+                obj (1,1) Header;
+                count (1,1) {mustBeInteger};
+            end
+            
+            res = obj.setNum(count - 1);
+        end
+
+        function res = setIndex(obj, index)
+            arguments
+                obj (1,1) Header;
+                index (1,1) {mustBeInteger};
+            end
+            
+            res = obj.setNum(index);
         end
     end
 
