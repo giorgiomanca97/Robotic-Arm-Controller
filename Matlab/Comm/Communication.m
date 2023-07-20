@@ -9,6 +9,8 @@ classdef Communication
     methods
         function obj = Communication(varargin)
             obj.Serial = serialport(varargin{:});
+            obj.PeekByte(1,1) = uint8(0);
+            obj.Peeked(1,1) = false;
         end
     end
 
