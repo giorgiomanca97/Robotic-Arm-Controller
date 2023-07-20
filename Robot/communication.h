@@ -310,14 +310,14 @@ public:
 
 class RobotComm {
 public:
-  RobotComm(Robot &robot, PinControl &toggle, uint8_t channel);
+  RobotComm(Robot &robot, uint8_t channel);
   ~RobotComm();
 
   void cycle(uint32_t time_us);
+  void cycle();
 
 private:
   Robot &robot;           // Robot controlled by this serial communication
-  PinControl &toggle;     // Pin used to debug time sampling consistency
   uint8_t channel;        // Serial channel used for communication
 
   Timer timer;            // Internal timer for serial communication during control operations

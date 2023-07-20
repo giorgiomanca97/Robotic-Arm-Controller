@@ -95,11 +95,11 @@ static bool Communication::isError(Code code){
 
 static bool Communication::peek(Communication::Header *hdr, Timer *timeout_us = NULL){
   if(hdr == NULL) return false;
-  int res;
+  int res = -1;
   if(timeout_us == NULL) {
     res = hwserial->peek();
   } else {
-    while(res != -1){
+    while(res == -1){
       if(timeout_us->check(micros())) break;
       res = hwserial->peek();
     } 
@@ -760,9 +760,12 @@ uint8_t Communication::MsgERROR::fill_payload(uint8_t *buffer){
 // RobotComm
 // ==================================================
 
-RobotComm::RobotComm(Robot &robot, PinControl &toggle, uint8_t channel) :
-  robot(robot), toggle(toggle) {
+RobotComm::RobotComm(Robot &robot, uint8_t channel) :
+  robot(robot) 
+{
   this->channel = channel;
+  this->timer.setup(robot.getTimeSampling());
+  this->timeout.setup(robot.getTimeSampling());
   this->encoders_rcv = malloc(robot.getSize() * sizeof(long));
   this->encoders_snd = malloc(robot.getSize() * sizeof(long));
 }
@@ -774,40 +777,22 @@ RobotComm::~RobotComm(){
 
 void RobotComm::cycle(uint32_t time_us){
   robot.update();
-  timeout.reset(time_us);
-
-  Communication::Header header;
-  bool res;
 
   Communication::channel(channel);
-  res = Communication::peek(&header, &timeout);
+  Communication::Header header;
+
+  bool res = Communication::peek(&header, NULL);
+  
   if(res){
+    timeout.reset(time_us);
     Communication::Code code = header.getCode();
     
     if(Communication::isCtrl(code)) {
-      Communication::MsgACKC msg_ackc;
-      msg_ackc.setCount(robot.getSize());
-
       if(robot.getStatus() == Robot::Status::Idle){
         timer.reset(time_us);
-      } else {
-        while(!timer.check(time_us));
-      }
-
-      toggle.set(true);
-
-      if(robot.getStatus() != Robot::Status::Idle){
-        for(uint8_t i = 0; i < 8; i++){
-          msg_ackc.setEndStop(i, robot.getEndStop(i));
-          msg_ackc.setDeltaEnc(i, robot.getEncoder(i) - encoders_snd[i]);
-          encoders_snd[i] += msg_ackc.getDeltaEnc(i);
-        }
-        res = Communication::snd(&msg_ackc);
-      } else {
-        res = true;
       }
       
-      if(res){
+      if(robot.getStatus() != Robot::Status::Ref || timer.check(time_us)) {
         switch(code){
           case Communication::Code::IDLE:
             Communication::MsgIDLE msg_idle;
@@ -840,23 +825,21 @@ void RobotComm::cycle(uint32_t time_us){
             }
             break;
         }
-      }
-      
-      if(res){
-        robot.compute();
-        robot.actuate();
 
-        if(robot.getStatus() == Robot::Status::Idle){
+        if(res){
+          robot.compute();
+          robot.actuate();
+
+          Communication::MsgACKC msg_ackc;
+          msg_ackc.setCount(robot.getSize());
           for(uint8_t i = 0; i < 8; i++){
             msg_ackc.setEndStop(i, robot.getEndStop(i));
             msg_ackc.setDeltaEnc(i, robot.getEncoder(i) - encoders_snd[i]);
             encoders_snd[i] += msg_ackc.getDeltaEnc(i);
           }
           res = Communication::snd(&msg_ackc);
-        }        
+        }
       }
-      
-      toggle.set(false);
     } 
     
     else if(Communication::isSetup(code)) {
@@ -912,4 +895,8 @@ void RobotComm::cycle(uint32_t time_us){
       Communication::snd(&msg_error);
     }
   }
+}
+
+void RobotComm::cycle(){
+  cycle(micros());
 }

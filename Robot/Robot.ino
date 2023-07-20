@@ -65,7 +65,7 @@
 
 // Control parameters
 #define BAUDRATE    115200  // Serial baudrate
-#define TS          10      // Control time sampling
+#define TS_US       10000   // Control time sampling (microseconds)
 
 #define PID_1_DIV   1000.0  // Motor 1 PID encoder error divider
 #define PID_1_KP    1.0     // Motor 1 PID proportional coefficient
@@ -164,10 +164,11 @@ Motor motor5 = Motor(mot5_ina, mot5_inb, mot5_pwm, mot5_cha, mot5_chb, mot5_end)
 Motor motor6 = Motor(mot6_ina, mot6_inb, mot6_pwm, mot6_cha, mot6_chb, mot6_end);
 
 PinControl enable = PinControl(MOTORS_EN);
-Robot robot = Robot(enable, 6, TS);
-
 PinControl toggle = PinControl(PIN_TOGGLE);
-RobotComm robotcomm = RobotComm(robot, toggle, 0);
+
+Robot robot = Robot(enable, 6, TS_US);
+
+RobotComm robotcomm = RobotComm(robot, 0);
 
 
 // ============================================================
@@ -217,5 +218,9 @@ void setup()
 
 void loop()
 {
-  robotcomm.cycle(micros());
+  uint32_t time_us = micros();
+
+  toggle.set(true);
+  robotcomm.cycle(time_us);
+  toggle.set(false);
 }
