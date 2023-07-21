@@ -14,7 +14,9 @@
 #endif
 
 //#define PIN_CONTROL_EXTRA_FEATURES
+//#define PIN_CONTROL_STORE_VALUES
 //#define PIN_MEASURE_EXTRA_FEATURES
+//#define PIN_MEASURE_STORE_VALUES
 
 
 #include <Arduino.h>
@@ -106,7 +108,7 @@ public:
   };
 #endif
 
-  //NOTE: Changing this timer 0 affects millis() and delay!
+  //NOTE: Changing timer 0 affects millis() and delay!
 
 #if defined(UNO)
   static void set(UnoTimer0 freq);
@@ -138,6 +140,7 @@ public:
   void set(bool state);
   void pwm(uint8_t pwm);
   void control(float value);
+
   #if defined(PIN_CONTROL_EXTRA_FEATURES)
   void feedback(float error);
   void feedback();
@@ -146,12 +149,23 @@ public:
   PID* getPID();
   #endif
 
+  #if defined(PIN_CONTROL_STORE_VALUES)
+  bool last_set();
+  uint8_t last_pwm();
+  #endif
+
 private:
   uint8_t pin;
   float v1;
   float v2;
+
   #if defined(PIN_CONTROL_EXTRA_FEATURES)
   PID *pid;
+  #endif
+
+  #if defined(PIN_CONTROL_STORE_VALUES)
+  bool set_;
+  uint8_t pwm_;
   #endif
 };
 
@@ -168,6 +182,7 @@ public:
   bool state();
   uint16_t value();
   float measure();
+
   #if defined(PIN_MEASURE_EXTRA_FEATURES)
   float filter(bool readonly);
   float filter();
@@ -176,12 +191,23 @@ public:
   Filter* getFilter();
   #endif
 
+  #if defined(PIN_MEASURE_STORE_VALUES)
+  bool last_state();
+  uint16_t last_value();
+  #endif
+
 private:
   uint8_t pin;
   float v1;
   float v2;
+
   #if defined(PIN_MEASURE_EXTRA_FEATURES)
   Filter* fil;
+  #endif
+
+  #if defined(PIN_MEASURE_STORE_VALUES)
+  bool state_;
+  uint16_t value_;
   #endif
 };
 

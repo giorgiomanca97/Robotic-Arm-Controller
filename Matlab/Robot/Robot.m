@@ -2,8 +2,8 @@ classdef Robot < handle
     properties (Access = private)
         Comm Communication;         % Serial communication
         N (1,1) uint8;              % Robot size
-        Ends (1,:) logical;         % Robot endstops value
-        Encs (1,:) int64;           % Robot encoders value
+        Ends (:,1) logical;         % Robot endstops value
+        Encs (:,1) int64;           % Robot encoders value
         Timeout (1,1) uint64;       % Target encoders value
     end
     
@@ -54,7 +54,7 @@ classdef Robot < handle
                 obj (1,1) Robot;
             end
 
-            endstops = obj.Ends(1, obj.N);
+            endstops = obj.Ends(1:obj.N, 1);
         end
 
         function encoders = getEncoders(obj)
@@ -62,7 +62,7 @@ classdef Robot < handle
                 obj (1,1) Robot;
             end
 
-            encoders = obj.Encs(1, obj.N);
+            encoders = obj.Encs(1:obj.N, 1);
         end
     end
     

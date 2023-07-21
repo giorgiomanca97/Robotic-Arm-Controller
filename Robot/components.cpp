@@ -69,10 +69,16 @@ void PinControl::setLimits(float v1, float v2){
 }
 
 void PinControl::set(bool state){
+  #if defined(PIN_CONTROL_STORE_VALUES)
+  this->set_ = state;
+  #endif
   digitalWrite(pin, state ? HIGH : LOW);
 }
 
 void PinControl::pwm(uint8_t pwm){
+  #if defined(PIN_CONTROL_STORE_VALUES)
+  this->pwm_ = pwm;
+  #endif
   analogWrite(pin, pwm);
 }
 
@@ -95,6 +101,16 @@ void PinControl::setPID(PID *pid){
 
 PID* PinControl::getPID(){
   return this->pid;
+}
+#endif
+
+#if defined(PIN_CONTROL_STORE_VALUES)
+bool PinControl::last_set(){
+  return this->set_;
+}
+
+uint8_t PinControl::last_pwm(){
+  return this->pwm_;
 }
 #endif
 
@@ -125,11 +141,21 @@ void PinMeasure::setLimits(float v1, float v2){
 }
 
 bool PinMeasure::state(){
+  #if defined(PIN_MEASURE_STORE_VALUES)
+  this->state_ = digitalRead(pin) == HIGH;
+  return this->state_;
+  #else
   return digitalRead(pin) == HIGH;
+  #endif
 }
 
 uint16_t PinMeasure::value(){
+  #if defined(PIN_MEASURE_STORE_VALUES)
+  this->value_ = analogRead(pin);
+  return this->value_;
+  #else
   return analogRead(pin);
+  #endif
 }
 
 float PinMeasure::measure(){
@@ -138,11 +164,11 @@ float PinMeasure::measure(){
 
 #if defined(PIN_MEASURE_EXTRA_FEATURES)
 float PinMeasure::filter(bool readonly){
-  return (fil != NULL) ? (readonly ? fil->output() : fil->evolve(measure())) : measure();
+  return ((fil != NULL) ? (readonly ? fil->output() : fil->evolve(measure())) : measure());
 }
 
 float PinMeasure::filter(){
-  return (fil != NULL) ? fil->evolve(measure()) : measure();
+  return ((fil != NULL) ? fil->evolve(measure()) : measure());
 }
 
 void PinMeasure::setFilter(Filter *filter){
@@ -151,6 +177,16 @@ void PinMeasure::setFilter(Filter *filter){
 
 Filter* PinMeasure::getFilter(){
   return this->fil;
+}
+#endif
+
+#if defined(PIN_MEASURE_STORE_VALUES)
+bool PinMeasure::last_state(){
+  return this->state_;
+}
+
+uint16_t PinMeasure::last_value(){
+  return this->value_;
 }
 #endif
 

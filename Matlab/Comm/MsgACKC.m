@@ -121,7 +121,7 @@ classdef MsgACKC < Message
 
             for k = 1:obj.getCount()
                 ens = logical(bitand(data(1), bitshift(1, k-1, 'uint8') , 'uint8'));
-                sgn = 1 - 2 * bitand(data(2), bitshift(1, k-1, 'uint8') , 'uint8');
+                sgn = 1 - 2 * (bitand(data(2), bitshift(1, k-1, 'uint8') , 'uint8') > 0);
                 val = int16(data(2+k));
                 obj.setEndStops(k, ens);
                 obj.setDeltaEnc(k, sgn*val);
@@ -140,8 +140,8 @@ classdef MsgACKC < Message
             for k = 1:obj.getCount()
                 ens = obj.getEndStops(k);
                 pwm = obj.getDeltaEnc(k);
-                data(1) = bitor(data(1), bitshift(ens, k-1, 'uint8'), 'uint8');
-                data(2) = bitor(data(2), bitshift(pwm<0, k-1, 'uint8'), 'uint8');
+                data(1) = bitor(data(1), bitshift(uint8(ens), k-1, 'uint8'), 'uint8');
+                data(2) = bitor(data(2), bitshift(uint8(pwm<0), k-1, 'uint8'), 'uint8');
                 data(2+k) = uint8(abs(pwm));
             end
         end

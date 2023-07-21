@@ -122,7 +122,7 @@ classdef Message < handle
             
             tmp = Header();
             res = tmp.parse(data);
-            if(res && code == tmp.getCode())
+            if(res && obj.Hdr.getCode() == tmp.getCode())
                 res = obj.Hdr.parse(data);
             else
                 res = false;

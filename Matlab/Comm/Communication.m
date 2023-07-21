@@ -92,7 +92,7 @@ classdef Communication
             end
 
             if(timeout_us > 0)
-                while(obj.Serial.NumBytesAvailable < 1 && toc(time) * 1e6 <= delta)
+                while(obj.Serial.NumBytesAvailable < msg.bsize() && toc(time) * 1e6 <= delta)
                 end
             end
 

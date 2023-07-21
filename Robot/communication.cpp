@@ -38,6 +38,43 @@ static void Communication::channel(uint8_t index){
 }
 #endif
 
+static void Communication::flush(){
+  while(hwserial->available()) {
+    hwserial->read();
+  }
+  hwserial->flush();
+}
+
+static bool Communication::peek(Communication::Header *hdr, Timer *timeout_us = NULL){
+  if(hdr == NULL) return false;
+  int res = -1;
+  if(timeout_us == NULL) {
+    res = hwserial->peek();
+  } else {
+    while(res == -1){
+      if(timeout_us->check(micros())) break;
+      res = hwserial->peek();
+    } 
+  }
+  if(res == -1) return false;
+  return hdr->parse(res);
+}
+
+static bool Communication::rcv(Communication::Message *msg, Timer *timeout_us = NULL){
+  if(msg == NULL) return false;
+  uint8_t buffer[msg->size()];
+  while(hwserial->available() < msg->size()) if(timeout_us != NULL && timeout_us->check(micros())) return false;
+  if(hwserial->readBytes(buffer, msg->size()) != msg->size()) return false;
+  return msg->from(buffer);
+}
+
+static bool Communication::snd(Communication::Message *msg){
+  if(msg == NULL) return false;
+  uint8_t buffer[msg->size()];
+  msg->fill(buffer);
+  return hwserial->write(buffer, msg->size()) == msg->size();
+}
+
 static bool Communication::convert(uint8_t value, Communication::Code &code){
   switch(value){
     case (uint8_t) Code::IDLE:
@@ -80,51 +117,17 @@ static bool Communication::isCtrl(Code code){
 
 static bool Communication::isSetup(Code code){
   uint8_t value = (uint8_t) code;
-  return ((value & 0b10000) == 1) && ((value & 0b01000) == 0) && ((value & 0b00100) == 0);
+  return ((value & 0b10000) != 0) && ((value & 0b01000) == 0) && ((value & 0b00100) == 0);
 }
 
 static bool Communication::isAck(Code code){
   uint8_t value = (uint8_t) code;
-  return ((value & 0b10000) == 1) && ((value & 0b01000) == 1) && ((value & 0b00100) == 0);
+  return ((value & 0b10000) != 0) && ((value & 0b01000) != 0) && ((value & 0b00100) == 0);
 }
 
 static bool Communication::isError(Code code){
   uint8_t value = (uint8_t) code;
-  return ((value & 0b10000) == 1) && ((value & 0b01000) == 1) && ((value & 0b00100) == 1);
-}
-
-static bool Communication::peek(Communication::Header *hdr, Timer *timeout_us = NULL){
-  if(hdr == NULL) return false;
-  int res = -1;
-  if(timeout_us == NULL) {
-    res = hwserial->peek();
-  } else {
-    while(res == -1){
-      if(timeout_us->check(micros())) break;
-      res = hwserial->peek();
-    } 
-  }
-  if(res == -1) return false;
-  return hdr->parse(res);
-}
-
-static bool Communication::rcv(Communication::Message *msg, Timer *timeout_us = NULL){
-  if(msg == NULL) return false;
-  uint8_t buffer[msg->size()];
-  while(hwserial->available() < msg->size()) if(timeout_us != NULL && timeout_us->check(micros())) return false;
-  if(hwserial->readBytes(buffer, msg->size()) != msg->size()) return false;
-  return msg->from(buffer);
-}
-
-static bool Communication::snd(Communication::Message *msg){
-  if(msg == NULL) return false;
-  uint8_t buffer[msg->size()];
-  msg->fill(buffer);
-  return hwserial->write(buffer, msg->size()) == msg->size();
-}
-
-static void Communication::flush(){
-  hwserial->flush();
+  return ((value & 0b10000) != 0) && ((value & 0b01000) != 0) && ((value & 0b00100) != 0);
 }
 
 // ===== Header =====
@@ -781,7 +784,7 @@ void RobotComm::cycle(uint32_t time_us){
   Communication::channel(channel);
   Communication::Header header;
 
-  bool res = Communication::peek(&header, NULL);
+  bool res = Communication::peek(&header);
   
   if(res){
     timeout.reset(time_us);
@@ -792,7 +795,7 @@ void RobotComm::cycle(uint32_t time_us){
         timer.reset(time_us);
       }
       
-      if(robot.getStatus() != Robot::Status::Ref || timer.check(time_us)) {
+      if(robot.getStatus() == Robot::Status::Idle || timer.check(time_us)) {
         switch(code){
           case Communication::Code::IDLE:
             Communication::MsgIDLE msg_idle;

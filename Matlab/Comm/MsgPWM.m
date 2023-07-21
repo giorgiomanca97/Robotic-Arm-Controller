@@ -91,7 +91,7 @@ classdef MsgPWM < Message
             end
 
             for k = 1:obj.getCount()
-                s = 1 - 2 * bitand(data(1), bitshift(1, k-1, 'uint8') , 'uint8');
+                s = 1 - 2 * (bitand(data(1), bitshift(1, k-1, 'uint8'), 'uint8') > 0);
                 v = int16(data(1+k));
                 obj.setPwm(k, s*v);
             end
@@ -108,7 +108,7 @@ classdef MsgPWM < Message
 
             for k = 1:obj.getCount()
                 pwm = obj.getPwm(k);
-                data(1) = bitor(data(1), bitshift(pwm<0, k-1, 'uint8'), 'uint8');
+                data(1) = bitor(data(1), bitshift(uint8(pwm<0), k-1, 'uint8'), 'uint8');
                 data(1+k) = uint8(abs(pwm));
             end
         end

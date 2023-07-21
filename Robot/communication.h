@@ -29,6 +29,7 @@ public:
   ~Communication() = delete;
   
   static void channel(uint8_t index);
+  static void flush();
   
   // Codes
   enum class Code : uint8_t{
@@ -304,7 +305,6 @@ public:
   static bool peek(Header *hdr, Timer *timeout_us = NULL);
   static bool rcv(Message *msg, Timer *timeout_us = NULL);
   static bool snd(Message *msg);
-  static void flush();
 };
 
 
