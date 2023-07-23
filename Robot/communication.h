@@ -20,6 +20,11 @@
 #include "components.h"
 
 
+#if defined(MEGA)
+#define DEBUG_COMM          // Debug serial communication debugging
+#endif
+
+
 // Serial Communication Protocol (static)
 class Communication {
   inline static HardwareSerial *hwserial = &Serial;

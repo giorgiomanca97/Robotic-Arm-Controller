@@ -57,7 +57,15 @@ static bool Communication::peek(Communication::Header *hdr, Timer *timeout_us = 
     } 
   }
   if(res == -1) return false;
-  return hdr->parse(res);
+  bool valid = hdr->parse(res);
+  #if defined(DEBUG_COMM)
+  Serial.print("peek: ");
+  Serial.print(valid ? "Done" : "None");
+  Serial.print(" | ");
+  Serial.print((uint8_t) hdr->getCode());
+  Serial.println();
+  #endif
+  return valid;
 }
 
 static bool Communication::rcv(Communication::Message *msg, Timer *timeout_us = NULL){
@@ -65,14 +73,34 @@ static bool Communication::rcv(Communication::Message *msg, Timer *timeout_us = 
   uint8_t buffer[msg->size()];
   while(hwserial->available() < msg->size()) if(timeout_us != NULL && timeout_us->check(micros())) return false;
   if(hwserial->readBytes(buffer, msg->size()) != msg->size()) return false;
-  return msg->from(buffer);
+  bool valid = msg->from(buffer);
+  #if defined(DEBUG_COMM)
+  Serial.print("rcv: ");
+  Serial.print((uint8_t) msg->getCode());
+  Serial.print(" ");
+  Serial.print(msg->size());
+  Serial.print(" -> ");
+  Serial.print(hwserial->available());
+  Serial.println();
+  #endif
+  return valid;
 }
 
 static bool Communication::snd(Communication::Message *msg){
   if(msg == NULL) return false;
   uint8_t buffer[msg->size()];
   msg->fill(buffer);
-  return hwserial->write(buffer, msg->size()) == msg->size();
+  bool valid = hwserial->write(buffer, msg->size()) == msg->size();
+  #if defined(DEBUG_COMM)
+  Serial.print("snd: ");
+  Serial.print((uint8_t) msg->getCode());
+  Serial.print(" ");
+  Serial.print(msg->size());
+  Serial.print(" -> ");
+  Serial.print(hwserial->availableForWrite());
+  Serial.println();
+  #endif
+  return valid;
 }
 
 static bool Communication::convert(uint8_t value, Communication::Code &code){
@@ -796,39 +824,61 @@ void RobotComm::cycle(uint32_t time_us){
       }
       
       if(robot.getStatus() == Robot::Status::Idle || timer.check(time_us)) {
+        #if defined(DEBUG_COMM)
+        Serial.println("Peeking Control");
+        #endif
+        
         switch(code){
           case Communication::Code::IDLE:
-            Communication::MsgIDLE msg_idle;
-            msg_idle.setCount(robot.getSize());
-            res = Communication::rcv(&msg_idle, &timeout);
-            if(!res) break;
-            robot.setStatus(Robot::Status::Idle);
-            break;
+            {
+              Communication::MsgIDLE msg_idle;
+              msg_idle.setCount(robot.getSize());
+              res = Communication::rcv(&msg_idle, &timeout);
+              if(!res) break;
+              robot.setStatus(Robot::Status::Idle);
+              break;
+            }
 
           case Communication::Code::PWM:
-            Communication::MsgPWM msg_pwm;
-            msg_pwm.setCount(robot.getSize());
-            res = Communication::rcv(&msg_pwm, &timeout);
-            if(!res) break;
-            robot.setStatus(Robot::Status::Pwm);
-            for(uint8_t i = 0; i < robot.getSize(); i++) {
-              robot.setPwm(i, msg_pwm.getPwm(i));
+            {
+              Communication::MsgPWM msg_pwm;
+              msg_pwm.setCount(robot.getSize());
+              res = Communication::rcv(&msg_pwm, &timeout);
+              if(!res) break;
+              robot.setStatus(Robot::Status::Pwm);
+              for(uint8_t i = 0; i < robot.getSize(); i++) {
+                robot.setPwm(i, msg_pwm.getPwm(i));
+              }
+              break;
             }
-            break;
 
           case Communication::Code::REF:
-            Communication::MsgREF msg_ref;
-            msg_ref.setCount(robot.getSize());
-            res = Communication::rcv(&msg_ref, &timeout);
-            if(!res) break;
-            robot.setStatus(Robot::Status::Ref);
-            for(uint8_t i = 0; i < robot.getSize(); i++) {
-              encoders_rcv[i] += msg_ref.getDeltaEnc(i);
-              robot.setTarget(i, encoders_rcv[i]);
+            {
+              Communication::MsgREF msg_ref;
+              msg_ref.setCount(robot.getSize());
+              res = Communication::rcv(&msg_ref, &timeout);
+              if(!res) break;
+              robot.setStatus(Robot::Status::Ref);
+              for(uint8_t i = 0; i < robot.getSize(); i++) {
+                encoders_rcv[i] += msg_ref.getDeltaEnc(i);
+                robot.setTarget(i, encoders_rcv[i]);
+              }
+              break;
             }
+
+          default:
+            res = false;
+            #if defined(DEBUG_COMM)
+            Serial.println("Unexpected Code");
+            #endif
             break;
         }
 
+        #if defined(DEBUG_COMM)
+        Serial.print("Receiving Control: ");
+        Serial.println(res ? "Succeded" : "Failed");
+        #endif
+        
         if(res){
           robot.compute();
           robot.actuate();
@@ -842,6 +892,11 @@ void RobotComm::cycle(uint32_t time_us){
           }
           res = Communication::snd(&msg_ackc);
         }
+
+        #if defined(DEBUG_COMM)
+        Serial.print("Sending Control Ack: ");
+        Serial.println(res ? "Succeded" : "Failed");
+        #endif
       }
     } 
     
@@ -851,33 +906,43 @@ void RobotComm::cycle(uint32_t time_us){
 
       switch(code){
         case Communication::Code::ROBOT:
-          Communication::MsgROBOT msg_robot;
-          res = Communication::rcv(&msg_robot, &timeout);
-          if(!res) break;
-          robot.setTimeSampling(msg_robot.getTimeSampling());
-          timer.setup(msg_robot.getTimeSampling());
-          timeout.setup(msg_robot.getTimeSampling());
-          msg_acks.setCount(robot.getSize());
-          break;
+          {
+            Communication::MsgROBOT msg_robot;
+            res = Communication::rcv(&msg_robot, &timeout);
+            if(!res) break;
+            robot.setTimeSampling(msg_robot.getTimeSampling());
+            timer.setup(msg_robot.getTimeSampling());
+            timeout.setup(msg_robot.getTimeSampling());
+            msg_acks.setCount(robot.getSize());
+            break;
+          }
 
         case Communication::Code::MOTOR:
-          Communication::MsgMOTOR msg_motor;
-          res = Communication::rcv(&msg_motor, &timeout);
-          if(!res) break;
-          if(msg_motor.getChangeEncoder()) robot.setEncoder(msg_motor.getIndex(), msg_motor.getEncoderValue());
-          if(msg_motor.getChangeSpinDir()) robot.invertMotor(msg_motor.getIndex(), msg_motor.getInvertSpinDir());
-          if(msg_motor.getChangeEncDir()) robot.invertEncoder(msg_motor.getIndex(), msg_motor.getInvertEncDir());
-          msg_acks.setIndex(msg_motor.getIndex());
-          break;
+          {
+            Communication::MsgMOTOR msg_motor;
+            res = Communication::rcv(&msg_motor, &timeout);
+            if(!res) break;
+            if(msg_motor.getChangeEncoder()) robot.setEncoder(msg_motor.getIndex(), msg_motor.getEncoderValue());
+            if(msg_motor.getChangeSpinDir()) robot.invertMotor(msg_motor.getIndex(), msg_motor.getInvertSpinDir());
+            if(msg_motor.getChangeEncDir()) robot.invertEncoder(msg_motor.getIndex(), msg_motor.getInvertEncDir());
+            msg_acks.setIndex(msg_motor.getIndex());
+            break;
+          }
 
         case Communication::Code::PID:
-          Communication::MsgPID msg_pid;
-          res = Communication::rcv(&msg_pid, &timeout);
-          if(!res) break;
-          robot.initPID(msg_motor.getIndex(), msg_pid.getPidSat(),  msg_pid.getPidPole());
-          robot.setupPID(msg_motor.getIndex(), msg_pid.getPidDiv(), msg_pid.getPidKp(), msg_pid.getPidKi(), msg_pid.getPidKd());
-          robot.resetPID(msg_motor.getIndex());
-          msg_acks.setIndex(msg_motor.getIndex());
+          {
+            Communication::MsgPID msg_pid;
+            res = Communication::rcv(&msg_pid, &timeout);
+            if(!res) break;
+            robot.initPID(msg_pid.getIndex(), msg_pid.getPidSat(),  msg_pid.getPidPole());
+            robot.setupPID(msg_pid.getIndex(), msg_pid.getPidDiv(), msg_pid.getPidKp(), msg_pid.getPidKi(), msg_pid.getPidKd());
+            robot.resetPID(msg_pid.getIndex());
+            msg_acks.setIndex(msg_pid.getIndex());
+            break;
+          }
+
+        default:
+          res = false;
           break;
       }
       

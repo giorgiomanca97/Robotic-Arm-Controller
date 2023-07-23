@@ -120,6 +120,10 @@
 #define CHANNEL     1       // Serial channel
 #define BAUDRATE    115200  // Serial baudrate
 
+// Debug
+#define DEBUG_COMM          // Debug serial communication debugging
+#define DEBUG_BAUD  115200  // Debug serial communication debugging
+
 
 // ============================================================
 // Components & Variables
@@ -198,7 +202,12 @@ void setup()
   } else {
     Serial1.begin(BAUDRATE);
     Serial1.flush();
-  }  
+  }
+
+  #if defined(DEBUG_COMM)
+    Serial.begin(DEBUG_BAUD);
+    Serial.flush();
+  #endif
 
   robot.setMotor(0, motor1);
   robot.setMotor(1, motor2);
