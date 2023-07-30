@@ -72,7 +72,7 @@
 // ============================================================
 
 // Control
-#define TS_US       10000   // Control time sampling (microseconds)
+#define TS_US       100000  // Control time sampling (microseconds)
 
 #define PID_1_DIV   1000.0  // Motor 1 PID encoder error divider
 #define PID_1_KP    1.0     // Motor 1 PID proportional coefficient

@@ -719,7 +719,7 @@ uint8_t Communication::MsgACKC::fill_payload(uint8_t *buffer){
   for(uint8_t i = 0; i < getCount(); i++){
     buffer[1] = buffer[1] | (getEndStop(i) << i);
     buffer[2] = buffer[2] | ((getDeltaEnc(i) < 0) << i);
-    buffer[3+i] = abs(getDeltaEnc(i));
+    buffer[3+i] = (uint8_t) abs(getDeltaEnc(i));
   }
   return size_payload();
 }
