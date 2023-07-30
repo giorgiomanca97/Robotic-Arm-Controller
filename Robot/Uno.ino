@@ -191,9 +191,7 @@ void loop() {
     delay(ERROR_MS);
   }
 
-  delay(TIMEOUT_US/2000);
   toggle.set(false);
-  delay(TIMEOUT_US/2000);
 }
 
 
