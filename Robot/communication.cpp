@@ -57,15 +57,13 @@ static bool Communication::peek(Communication::Header *hdr, Timer *timeout_us = 
     } 
   }
   if(res == -1) return false;
-  bool valid = hdr->parse(res);
+  hdr->parse(res);
   #if defined(DEBUG_COMM)
   Serial.print("peek: ");
-  Serial.print(valid ? "Done" : "None");
-  Serial.print(" | ");
   Serial.print((uint8_t) hdr->getCode());
   Serial.println();
   #endif
-  return valid;
+  return true;
 }
 
 static bool Communication::rcv(Communication::Message *msg, Timer *timeout_us = NULL){
@@ -267,7 +265,7 @@ uint8_t Communication::Message::from_header(uint8_t *buffer){
   Code code;
   if(!convert((buffer[0] & 0b11111000) >> 3, code)) return 0;
   if(getCode() != code) return 0;
-  setNum(buffer[1] & 0b00000111);
+  setNum(buffer[0] & 0b00000111);
   return size_header();
 }
 
