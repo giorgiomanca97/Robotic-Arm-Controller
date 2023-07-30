@@ -77,8 +77,16 @@ static bool Communication::rcv(Communication::Message *msg, Timer *timeout_us = 
   Serial.print((uint8_t) msg->getCode());
   Serial.print(" ");
   Serial.print(msg->size());
-  Serial.print(" -> ");
+  Serial.print(" ");
   Serial.print(hwserial->available());
+  Serial.print(" |");
+  for(int i = 0; i < msg->size(); i++){
+    char hhex, lhex;
+    byteToHex(buffer[i], hhex, lhex);
+    Serial.print(" ");
+    Serial.print(hhex);
+    Serial.print(lhex);
+  }
   Serial.println();
   #endif
   return valid;
@@ -94,8 +102,16 @@ static bool Communication::snd(Communication::Message *msg){
   Serial.print((uint8_t) msg->getCode());
   Serial.print(" ");
   Serial.print(msg->size());
-  Serial.print(" -> ");
+  Serial.print(" ");
   Serial.print(hwserial->availableForWrite());
+  Serial.print(" |");
+  for(int i = 0; i < msg->size(); i++){
+    char hhex, lhex;
+    byteToHex(buffer[i], hhex, lhex);
+    Serial.print(" ");
+    Serial.print(hhex);
+    Serial.print(lhex);
+  }
   Serial.println();
   #endif
   return valid;
@@ -240,8 +256,8 @@ uint8_t Communication::Message::from(uint8_t *buffer){
 }
 
 uint8_t Communication::Message::fill(uint8_t *buffer){
-  if(!fill_header(buffer) != size_header()) return 0;
-  if(!fill_payload(buffer) != size_payload()) return 0;
+  if(fill_header(buffer) != size_header()) return 0;
+  if(fill_payload(buffer) != size_payload()) return 0;
   return size();
 }
 
@@ -797,6 +813,11 @@ RobotComm::RobotComm(Robot &robot, uint8_t channel) :
   this->timeout.setup(robot.getTimeSampling());
   this->encoders_rcv = malloc(robot.getSize() * sizeof(long));
   this->encoders_snd = malloc(robot.getSize() * sizeof(long));
+
+  for(int i = 0; i < robot.getSize(); i++) {
+    this->encoders_rcv[i] = 0;
+    this->encoders_snd[i] = 0;
+  }
 }
 
 RobotComm::~RobotComm(){
@@ -881,14 +902,44 @@ void RobotComm::cycle(uint32_t time_us){
           robot.compute();
           robot.actuate();
 
+          #if defined(DEBUG_COMM)
+          Serial.print("Encoder true:");
+          #endif
+
           Communication::MsgACKC msg_ackc;
           msg_ackc.setCount(robot.getSize());
-          for(uint8_t i = 0; i < 8; i++){
+          for(uint8_t i = 0; i < robot.getSize(); i++){
             msg_ackc.setEndStop(i, robot.getEndStop(i));
             msg_ackc.setDeltaEnc(i, robot.getEncoder(i) - encoders_snd[i]);
-            encoders_snd[i] += msg_ackc.getDeltaEnc(i);
+            #if defined(DEBUG_COMM)
+            Serial.print(" ");
+            Serial.print(robot.getEncoder(i));
+            #endif
           }
+
+          #if defined(DEBUG_COMM)
+          Serial.println();
+          #endif
+
           res = Communication::snd(&msg_ackc);
+
+          if(res) {
+            #if defined(DEBUG_COMM)
+            Serial.print("Encoder sent:");
+            #endif
+
+            for(uint8_t i = 0; i < robot.getSize(); i++){
+              encoders_snd[i] += msg_ackc.getDeltaEnc(i);
+              #if defined(DEBUG_COMM)
+              Serial.print(" ");
+              Serial.print(encoders_snd[i]);
+              #endif
+            }
+
+            #if defined(DEBUG_COMM)
+            Serial.println();
+            #endif
+          }
         }
 
         #if defined(DEBUG_COMM)

@@ -141,7 +141,9 @@ void loop() {
     if (!res) {
       lcd.clear();
       lcd.setCursor(0, 0);
-      lcd.print("Header Code");
+      lcd.print("Code (");
+      lcd.print((uint8_t) hdr.getCode());
+      lcd.print(")");
       lcd.setCursor(0, 1);
       lcd.print("Error");
       delay(ERROR_MS);

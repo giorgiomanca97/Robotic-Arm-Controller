@@ -300,13 +300,15 @@ Robot::Robot(PinControl &enable, uint8_t size, uint32_t ts_us)
   this->mot_ends = malloc(size * sizeof(bool));
   this->mot_acts = malloc(size * sizeof(int16_t));
   
-  for(int i = 0; i < size; i++){
+  for(int i = 0; i < size; i++)
+  {
     this->pids_div[i] = 1.0;
     this->pids_kp[i] = 0.0;
     this->pids_ki[i] = 0.0;
     this->pids_kd[i] = 0.0;
     this->pids_sat[i] = 0.0;
-    this->pids_pole[i] = 1.0;
+    this->pids_pole[i] = 0.0;
+
     this->mot_encs[i] = 0;
     this->mot_pwms[i] = 0;
     this->mot_refs[i] = 0;
