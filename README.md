@@ -9,7 +9,7 @@ Serial communication protocol for DC motors control by a microcontroller (Arduin
 
 The communication is always started by the Companion PC (the master), while the Microcontroller (the slave) always reply to a received message.\
 Conversely, the Microcontroller never send a message (namely a reply) if not triggered by a message from the Companion PC.\
-The exchange of message is eventually timed by the microcontroller (in respect of the operation mode).
+The exchange of message is eventually timed by the microcontroller (based on the operation mode).
 
 <br><br>
 
