@@ -844,12 +844,15 @@ void RobotComm::cycle(uint32_t time_us){
       
       if(robot.getStatus() == Robot::Status::Idle || timer.check(time_us)) {
         #if defined(DEBUG_COMM)
-        Serial.println("Peeking Control");
+        Serial.print("Peeking Control: ");
         #endif
         
         switch(code){
           case Communication::Code::IDLE:
             {
+              #if defined(DEBUG_COMM)
+              Serial.println("IDLE");
+              #endif
               Communication::MsgIDLE msg_idle;
               msg_idle.setCount(robot.getSize());
               res = Communication::rcv(&msg_idle, &timeout);
@@ -860,6 +863,9 @@ void RobotComm::cycle(uint32_t time_us){
 
           case Communication::Code::PWM:
             {
+              #if defined(DEBUG_COMM)
+              Serial.println("PWM");
+              #endif
               Communication::MsgPWM msg_pwm;
               msg_pwm.setCount(robot.getSize());
               res = Communication::rcv(&msg_pwm, &timeout);
@@ -873,6 +879,9 @@ void RobotComm::cycle(uint32_t time_us){
 
           case Communication::Code::REF:
             {
+              #if defined(DEBUG_COMM)
+              Serial.println("REF");
+              #endif
               Communication::MsgREF msg_ref;
               msg_ref.setCount(robot.getSize());
               res = Communication::rcv(&msg_ref, &timeout);
@@ -886,10 +895,10 @@ void RobotComm::cycle(uint32_t time_us){
             }
 
           default:
-            res = false;
             #if defined(DEBUG_COMM)
-            Serial.println("Unexpected Code");
+            Serial.println("Unexpected");
             #endif
+            res = false;
             break;
         }
 
@@ -953,9 +962,16 @@ void RobotComm::cycle(uint32_t time_us){
       robot.setStatus(Robot::Status::Idle, true);
       Communication::MsgACKS msg_acks;
 
+      #if defined(DEBUG_COMM)
+      Serial.print("Peeking Setup:");
+      #endif
+
       switch(code){
         case Communication::Code::ROBOT:
           {
+            #if defined(DEBUG_COMM)
+            Serial.println("ROBOT");
+            #endif
             Communication::MsgROBOT msg_robot;
             res = Communication::rcv(&msg_robot, &timeout);
             if(!res) break;
@@ -968,6 +984,9 @@ void RobotComm::cycle(uint32_t time_us){
 
         case Communication::Code::MOTOR:
           {
+            #if defined(DEBUG_COMM)
+            Serial.println("MOTOR");
+            #endif
             Communication::MsgMOTOR msg_motor;
             res = Communication::rcv(&msg_motor, &timeout);
             if(!res) break;
@@ -980,6 +999,9 @@ void RobotComm::cycle(uint32_t time_us){
 
         case Communication::Code::PID:
           {
+            #if defined(DEBUG_COMM)
+            Serial.println("PID");
+            #endif
             Communication::MsgPID msg_pid;
             res = Communication::rcv(&msg_pid, &timeout);
             if(!res) break;
@@ -991,17 +1013,34 @@ void RobotComm::cycle(uint32_t time_us){
           }
 
         default:
+          #if defined(DEBUG_COMM)
+          Serial.println("Unexpected");
+          #endif
           res = false;
           break;
       }
+
+      #if defined(DEBUG_COMM)
+      Serial.print("Receiving Setup: ");
+      Serial.println(res ? "Succeded" : "Failed");
+      #endif
       
       if(res){
         res = Communication::snd(&msg_acks);
       }
+
+      #if defined(DEBUG_COMM)
+      Serial.print("Sending Setup Ack: ");
+      Serial.println(res ? "Succeded" : "Failed");
+      #endif
     }
 
     else {
       res = false;
+
+      #if defined(DEBUG_COMM)
+      Serial.println("Peeking Unexpected message");
+      #endif
     }
 
     if(!res){
@@ -1009,7 +1048,18 @@ void RobotComm::cycle(uint32_t time_us){
       Communication::flush();
       Communication::MsgERROR msg_error;
       msg_error.setCount(robot.getSize());
-      Communication::snd(&msg_error);
+
+      #if defined(DEBUG_COMM)
+      Serial.println("Sending Error Message");
+      #endif
+
+      res = Communication::snd(&msg_error);
+
+      #if defined(DEBUG_COMM)
+      if(!res) {
+        Serial.println("Communication Error");
+      }
+      #endif
     }
   }
 }
