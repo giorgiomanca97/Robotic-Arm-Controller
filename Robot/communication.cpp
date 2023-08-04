@@ -58,7 +58,7 @@ static bool Communication::peek(Communication::Header *hdr, Timer *timeout_us = 
   }
   if(res == -1) return false;
   hdr->parse(res);
-  #if defined(DEBUG_COMM)
+  #if defined(DEBUG_COMMUNICATION)
   Serial.print("peek: ");
   Serial.print((uint8_t) hdr->getCode());
   Serial.println();
@@ -72,7 +72,7 @@ static bool Communication::rcv(Communication::Message *msg, Timer *timeout_us = 
   while(hwserial->available() < msg->size()) if(timeout_us != NULL && timeout_us->check(micros())) return false;
   if(hwserial->readBytes(buffer, msg->size()) != msg->size()) return false;
   bool valid = msg->from(buffer);
-  #if defined(DEBUG_COMM)
+  #if defined(DEBUG_COMMUNICATION)
   Serial.print("rcv: ");
   Serial.print((uint8_t) msg->getCode());
   Serial.print(" ");
@@ -97,7 +97,7 @@ static bool Communication::snd(Communication::Message *msg){
   uint8_t buffer[msg->size()];
   msg->fill(buffer);
   bool valid = hwserial->write(buffer, msg->size()) == msg->size();
-  #if defined(DEBUG_COMM)
+  #if defined(DEBUG_COMMUNICATION)
   Serial.print("snd: ");
   Serial.print((uint8_t) msg->getCode());
   Serial.print(" ");
@@ -843,26 +843,27 @@ void RobotComm::cycle(uint32_t time_us){
       }
       
       if(robot.getStatus() == Robot::Status::Idle || timer.check(time_us)) {
-        #if defined(DEBUG_COMM)
+        #if defined(DEBUG_COMMUNICATION)
         Serial.print("Receiving Control ");
         #endif
         
         switch(code){
           case Communication::Code::IDLE:
             {
-              #if defined(DEBUG_COMM)
+              #if defined(DEBUG_COMMUNICATION)
               Serial.println("IDLE");
               #endif
               Communication::MsgIDLE msg_idle;
               msg_idle.setCount(robot.getSize());
               res = Communication::rcv(&msg_idle, &timeout);
-              #if defined(DEBUG_COMM)
+              res = res && msg_idle.getCount() == robot.getSize();
+              #if defined(DEBUG_COMMUNICATION)
               Serial.print("  operation: ");
               Serial.println(res ? "Succeded" : "Failed");
               #endif
               if(!res) break;
               robot.setStatus(Robot::Status::Idle);
-              #if defined(DEBUG_COMM)
+              #if defined(DEBUG_COMMUNICATION)
               Serial.print("  count: ");
               Serial.println(msg_idle.getCount());
               #endif
@@ -871,13 +872,14 @@ void RobotComm::cycle(uint32_t time_us){
 
           case Communication::Code::PWM:
             {
-              #if defined(DEBUG_COMM)
+              #if defined(DEBUG_COMMUNICATION)
               Serial.println("PWM");
               #endif
               Communication::MsgPWM msg_pwm;
               msg_pwm.setCount(robot.getSize());
               res = Communication::rcv(&msg_pwm, &timeout);
-              #if defined(DEBUG_COMM)
+              res = res && msg_pwm.getCount() == robot.getSize();
+              #if defined(DEBUG_COMMUNICATION)
               Serial.print("  operation: ");
               Serial.println(res ? "Succeded" : "Failed");
               #endif
@@ -886,7 +888,7 @@ void RobotComm::cycle(uint32_t time_us){
               for(uint8_t i = 0; i < robot.getSize(); i++) {
                 robot.setPwm(i, msg_pwm.getPwm(i));
               }
-              #if defined(DEBUG_COMM)
+              #if defined(DEBUG_COMMUNICATION)
               Serial.print("  count: ");
               Serial.println(msg_pwm.getCount());
               for(int i = 0; i < msg_pwm.getCount(); i++) {
@@ -901,13 +903,14 @@ void RobotComm::cycle(uint32_t time_us){
 
           case Communication::Code::REF:
             {
-              #if defined(DEBUG_COMM)
+              #if defined(DEBUG_COMMUNICATION)
               Serial.println("REF");
               #endif
               Communication::MsgREF msg_ref;
               msg_ref.setCount(robot.getSize());
               res = Communication::rcv(&msg_ref, &timeout);
-              #if defined(DEBUG_COMM)
+              res = res && msg_ref.getCount() == robot.getSize();
+              #if defined(DEBUG_COMMUNICATION)
               Serial.print("  operation: ");
               Serial.println(res ? "Succeded" : "Failed");
               #endif
@@ -917,7 +920,7 @@ void RobotComm::cycle(uint32_t time_us){
                 encoders_rcv[i] += msg_ref.getDeltaEnc(i);
                 robot.setTarget(i, encoders_rcv[i]);
               }
-              #if defined(DEBUG_COMM)
+              #if defined(DEBUG_COMMUNICATION)
               Serial.print("  count: ");
               Serial.println(msg_ref.getCount());
               for(int i = 0; i < msg_ref.getCount(); i++) {
@@ -931,7 +934,7 @@ void RobotComm::cycle(uint32_t time_us){
             }
 
           default:
-            #if defined(DEBUG_COMM)
+            #if defined(DEBUG_COMMUNICATION)
             Serial.println("Unexpected");
             #endif
             res = false;
@@ -951,7 +954,7 @@ void RobotComm::cycle(uint32_t time_us){
 
           res = Communication::snd(&msg_ackc);
 
-          #if defined(DEBUG_COMM)
+          #if defined(DEBUG_COMMUNICATION)
           Serial.println("Sending Control ACKC");
           Serial.print("  operation: ");
           Serial.println(res ? "Succeded" : "Failed");
@@ -976,7 +979,7 @@ void RobotComm::cycle(uint32_t time_us){
             }
           }
 
-          #if defined(DEBUG_COMM)
+          #if defined(DEBUG_COMMUNICATION)
           Serial.print("Encoder rob:");
           for(uint8_t i = 0; i < robot.getSize(); i++){
             Serial.print(" ");
@@ -985,7 +988,7 @@ void RobotComm::cycle(uint32_t time_us){
           Serial.println();
           #endif
 
-          #if defined(DEBUG_COMM)
+          #if defined(DEBUG_COMMUNICATION)
           Serial.print("Encoder rcv:");
           for(uint8_t i = 0; i < robot.getSize(); i++){
             Serial.print(" ");
@@ -994,7 +997,7 @@ void RobotComm::cycle(uint32_t time_us){
           Serial.println();
           #endif
 
-          #if defined(DEBUG_COMM)
+          #if defined(DEBUG_COMMUNICATION)
           Serial.print("Encoder snd:");
           for(uint8_t i = 0; i < robot.getSize(); i++){
             Serial.print(" ");
@@ -1010,19 +1013,20 @@ void RobotComm::cycle(uint32_t time_us){
       robot.setStatus(Robot::Status::Idle, true);
       Communication::MsgACKS msg_acks;
 
-      #if defined(DEBUG_COMM)
+      #if defined(DEBUG_COMMUNICATION)
       Serial.print("Receiving Setup ");
       #endif
 
       switch(code){
         case Communication::Code::ROBOT:
           {
-            #if defined(DEBUG_COMM)
+            #if defined(DEBUG_COMMUNICATION)
             Serial.println("ROBOT");
             #endif
             Communication::MsgROBOT msg_robot;
             res = Communication::rcv(&msg_robot, &timeout);
-            #if defined(DEBUG_COMM)
+            res = res && msg_robot.getCount() == robot.getSize();
+            #if defined(DEBUG_COMMUNICATION)
             Serial.print("  operation: ");
             Serial.println(res ? "Succeded" : "Failed");
             #endif
@@ -1030,7 +1034,7 @@ void RobotComm::cycle(uint32_t time_us){
             robot.setTimeSampling(msg_robot.getTimeSampling());
             timer.setup(msg_robot.getTimeSampling());
             timeout.setup(msg_robot.getTimeSampling());
-            #if defined(DEBUG_COMM)
+            #if defined(DEBUG_COMMUNICATION)
             Serial.print("  count: ");
             Serial.println(msg_robot.getCount());
             Serial.print("  time-sampling: ");
@@ -1042,12 +1046,13 @@ void RobotComm::cycle(uint32_t time_us){
 
         case Communication::Code::MOTOR:
           {
-            #if defined(DEBUG_COMM)
+            #if defined(DEBUG_COMMUNICATION)
             Serial.println("MOTOR");
             #endif
             Communication::MsgMOTOR msg_motor;
             res = Communication::rcv(&msg_motor, &timeout);
-            #if defined(DEBUG_COMM)
+            res = res && msg_motor.getIndex() < robot.getSize();
+            #if defined(DEBUG_COMMUNICATION)
             Serial.print("  operation: ");
             Serial.println(res ? "Succeded" : "Failed");
             #endif
@@ -1055,7 +1060,7 @@ void RobotComm::cycle(uint32_t time_us){
             if(msg_motor.getChangeEncoder()) robot.setEncoder(msg_motor.getIndex(), msg_motor.getEncoderValue());
             if(msg_motor.getChangeSpinDir()) robot.invertMotor(msg_motor.getIndex(), msg_motor.getInvertSpinDir());
             if(msg_motor.getChangeEncDir()) robot.invertEncoder(msg_motor.getIndex(), msg_motor.getInvertEncDir());
-            #if defined(DEBUG_COMM)
+            #if defined(DEBUG_COMMUNICATION)
             Serial.print("  index: ");
             Serial.println(msg_motor.getIndex());
             Serial.print("  encoder: ");
@@ -1072,12 +1077,13 @@ void RobotComm::cycle(uint32_t time_us){
 
         case Communication::Code::PID:
           {
-            #if defined(DEBUG_COMM)
+            #if defined(DEBUG_COMMUNICATION)
             Serial.println("PID");
             #endif
             Communication::MsgPID msg_pid;
             res = Communication::rcv(&msg_pid, &timeout);
-            #if defined(DEBUG_COMM)
+            res = res && msg_pid.getIndex() < robot.getSize();
+            #if defined(DEBUG_COMMUNICATION)
             Serial.print("  operation: ");
             Serial.println(res ? "Succeded" : "Failed");
             #endif
@@ -1085,7 +1091,7 @@ void RobotComm::cycle(uint32_t time_us){
             robot.initPID(msg_pid.getIndex(), msg_pid.getPidSat(),  msg_pid.getPidPole());
             robot.setupPID(msg_pid.getIndex(), msg_pid.getPidDiv(), msg_pid.getPidKp(), msg_pid.getPidKi(), msg_pid.getPidKd());
             robot.resetPID(msg_pid.getIndex());
-            #if defined(DEBUG_COMM)
+            #if defined(DEBUG_COMMUNICATION)
             Serial.print("  index: ");
             Serial.println(msg_pid.getIndex());
             Serial.print("  div: ");
@@ -1106,7 +1112,7 @@ void RobotComm::cycle(uint32_t time_us){
           }
 
         default:
-          #if defined(DEBUG_COMM)
+          #if defined(DEBUG_COMMUNICATION)
           Serial.println("Unexpected");
           #endif
           res = false;
@@ -1116,7 +1122,7 @@ void RobotComm::cycle(uint32_t time_us){
       if(res){
         res = Communication::snd(&msg_acks);
 
-        #if defined(DEBUG_COMM)
+        #if defined(DEBUG_COMMUNICATION)
         Serial.println("Sending Setup ACKS");
         Serial.print("  operation: ");
         Serial.println(res ? "Succeded" : "Failed");
@@ -1131,7 +1137,7 @@ void RobotComm::cycle(uint32_t time_us){
     else {
       res = false;
 
-      #if defined(DEBUG_COMM)
+      #if defined(DEBUG_COMMUNICATION)
       Serial.println("Peeking Unexpected message");
       #endif
     }
@@ -1144,7 +1150,7 @@ void RobotComm::cycle(uint32_t time_us){
 
       res = Communication::snd(&msg_error);
 
-      #if defined(DEBUG_COMM)
+      #if defined(DEBUG_COMMUNICATION)
       Serial.println("Sending Error ERROR");
       Serial.print("  operation: ");
       Serial.println(res ? "Succeded" : "Failed");

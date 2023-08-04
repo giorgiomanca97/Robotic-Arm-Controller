@@ -1,13 +1,11 @@
 // Debug code
 
-#if defined(UNO)
+#if SELECT_SKETCH == 2
 
 
 // ============================================================
 // Includes
 // ============================================================
-
-#include <LiquidCrystal.h>
 
 #include "utils.h"
 #include "control.h"
@@ -27,16 +25,21 @@
 // ============================================================
 
 // Serial Communication
-#define BAUDRATE 115200   // Serial baudrate
-#define TIMEOUT_US 100000 // Communication Timeout
-#define ERROR_MS 1000     // Communication Timeout
+#define CHANNEL     1       // Serial channel
+#define BAUDRATE    115200  // Serial baudrate
+#define TIMEOUT_US  100000  // Communication Timeout
+#define ERROR_MS    1000    // Communication Timeout
+
+// Debug
+#if defined(DEBUG_COMMUNICATION)
+#define DEBUG_SERIAL_ENABLE
+#define DEBUG_SERIAL_BAUDRATE 115200
+#endif
 
 
 // ============================================================
 // Components & Variables
 // ============================================================
-
-LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 PinControl toggle = PinControl(PIN_TOGGLE);
 Timer timeout;
@@ -54,40 +57,34 @@ Communication::Header hdr;
 void setup() {
   toggle.set(true);
 
-  Serial.begin(BAUDRATE);
-  Serial.flush();
+  switch(CHANNEL) {
+    case 0:
+      Serial.begin(BAUDRATE);
+      Serial.flush();
+    case 1:
+      Serial1.begin(BAUDRATE);
+      Serial1.flush();
+    case 2:
+      Serial2.begin(BAUDRATE);
+      Serial2.flush();
+    case 3:
+      Serial3.begin(BAUDRATE);
+      Serial3.flush();
+  }
+
+  #if defined(DEBUG_SERIAL_ENABLE)
+    Serial.begin(DEBUG_SERIAL_BAUDRATE);
+    Serial.flush();
+  #endif
 
   timeout.setup(2*TIMEOUT_US);
-  Communication::channel(0);
+
+  Communication::channel(CHANNEL);
   msg.setCount(6);
   ack.setCount(6);
   err.setCount(6);
 
   toggle.set(false);
-
-  lcd.begin(16, 2);
-  lcd.clear();
-
-  char hex;
-  for (uint8_t b = 0; b < 32; b++) {
-    if (b == 0) {
-      lcd.setCursor(0, 0);
-    }
-    if (b == 16) {
-      lcd.setCursor(0, 1);
-    }
-
-    if (b < 16) {
-      nibbleToHex(b, hex);
-    } else {
-      nibbleToHex(b - 16, hex);
-    }
-
-    lcd.print(hex);
-  }
-
-  delay(ERROR_MS);
-  lcd.clear();
 }
 
 
@@ -112,11 +109,7 @@ void loop() {
     res = Communication::snd(&msg);
 
     if (!res) {
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Send");
-      lcd.setCursor(0, 1);
-      lcd.print("Error");
+      Serial.println("Send Error");
       delay(ERROR_MS);
     }
   }
@@ -126,11 +119,7 @@ void loop() {
     res = Communication::peek(&hdr, &timeout);
 
     if (!res) {
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Peek");
-      lcd.setCursor(0, 1);
-      lcd.print("Error");
+      Serial.println("Peek Error");
       delay(ERROR_MS);
     }
   }
@@ -139,55 +128,25 @@ void loop() {
     res = hdr.getCode() == Communication::Code::ACKC;
 
     if (!res) {
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Code (");
-      lcd.print((uint8_t) hdr.getCode());
-      lcd.print(")");
-      lcd.setCursor(0, 1);
-      lcd.print("Error");
+      Serial.print("Code (");
+      Serial.print((uint8_t) hdr.getCode());
+      Serial.println(") Error");
       delay(ERROR_MS);
     }
   }
 
   if (res) {
     res = Communication::rcv(&ack, &timeout);
-
-    if(res) {
-      uint8_t buffer[ack.size()];
-      ack.fill(buffer);
-
-      char hhex, lhex;
-      bool found = false;
-
-      lcd.clear();
-      lcd.setCursor(0, 0);
-
-      for(int i = 0; i < ack.size(); i++) {
-        if (i == 8) lcd.setCursor(0, 1);
-        byteToHex(buffer[i], hhex, lhex);
-        lcd.print(hhex);
-        lcd.print(lhex);
-      }
-    } 
     
     if (!res) {
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Receive");
-      lcd.setCursor(0, 1);
-      lcd.print("Error");
+      Serial.println("Receive Error");
       delay(ERROR_MS);
     }
   }
 
   if (!res) {
     Communication::flush();
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Communication");
-    lcd.setCursor(0, 1);
-    lcd.print("Error");
+    Serial.println("Communication Error");
     delay(ERROR_MS);
   }
 

@@ -10,9 +10,18 @@
 #define LEONARDO
 #endif
 
-#if !defined(UNO) && !defined(MEGA)
+#define SELECT_SKETCH 2
+// 1: Controller
+// 2: Debugger
+
+#if !defined(MEGA)
+
+#ifdef SELECT_SKETCH
+#undef SELECT_SKETCH
+#endif
 
 void setup() {}
 void loop() {}
 
 #endif
+

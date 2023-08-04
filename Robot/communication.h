@@ -21,7 +21,7 @@
 
 
 #if defined(MEGA)
-#define DEBUG_COMM          // Debug serial communication debugging
+#define DEBUG_COMMUNICATION          // Debug serial communication debugging
 #endif
 
 
