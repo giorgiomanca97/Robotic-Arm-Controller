@@ -17,7 +17,7 @@
 // Pins
 // ============================================================
 
-#define PIN_TOGGLE 13  // Toggle
+#define PIN_TOGGLE 52       // Toggle pin used to check timesampling
 
 
 // ============================================================
@@ -27,7 +27,7 @@
 // Serial Communication
 #define CHANNEL     1       // Serial channel
 #define BAUDRATE    115200  // Serial baudrate
-#define TIMEOUT_US  100000  // Communication Timeout
+#define TIMEOUT_US  250000  // Communication Timeout
 #define ERROR_MS    1000    // Communication Timeout
 
 // Debug

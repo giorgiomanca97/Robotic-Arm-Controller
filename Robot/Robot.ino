@@ -10,7 +10,7 @@
 #define LEONARDO
 #endif
 
-#define SELECT_SKETCH 2
+#define SELECT_SKETCH 1
 // 1: Controller
 // 2: Debugger
 

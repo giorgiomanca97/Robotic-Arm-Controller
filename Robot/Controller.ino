@@ -63,7 +63,8 @@
 #define MOTOR_6_END 32      // Motor 6 endstop switch
 
 // Other pins
-#define PIN_TOGGLE  52      // Toggle pin used to check timesampling
+#define TOGGLE_COMM  52     // Toggle pin used to check timesampling
+#define TOGGLE_CTRL  53     // Toggle pin used to check timesampling
 
 
 // ============================================================
@@ -71,7 +72,7 @@
 // ============================================================
 
 // Control
-#define TS_US       100000  // Control time sampling (microseconds)
+#define TS_US       250000  // Control time sampling (microseconds)
 
 #define PID_1_DIV   1000.0  // Motor 1 PID encoder error divider
 #define PID_1_KP    1.0     // Motor 1 PID proportional coefficient
@@ -180,7 +181,8 @@ Motor motor5 = Motor(mot5_ina, mot5_inb, mot5_pwm, mot5_cha, mot5_chb, mot5_end)
 Motor motor6 = Motor(mot6_ina, mot6_inb, mot6_pwm, mot6_cha, mot6_chb, mot6_end);
 
 PinControl enable = PinControl(MOTORS_EN);
-PinControl toggle = PinControl(PIN_TOGGLE);
+PinControl toggle_comm = PinControl(TOGGLE_COMM);
+PinControl toggle_ctrl = PinControl(TOGGLE_CTRL);
 
 Robot robot = Robot(enable, 6, TS_US);
 RobotComm robotcomm = RobotComm(robot, CHANNEL);
@@ -192,8 +194,6 @@ RobotComm robotcomm = RobotComm(robot, CHANNEL);
 
 void setup()
 {
-  toggle.set(true);
-
   PWMfreq::set(PWMfreq::MegaTimer3::FREQ_3921_16);
   PWMfreq::set(PWMfreq::MegaTimer4::FREQ_3921_16);
 
@@ -240,7 +240,8 @@ void setup()
 
   robot.enableMotors();
 
-  toggle.set(false);
+  robotcomm.setPinComm(&toggle_comm);
+  robotcomm.setPinCtrl(&toggle_ctrl);
 }
 
 
@@ -252,9 +253,7 @@ void loop()
 {
   uint32_t time_us = micros();
 
-  toggle.set(true);
   robotcomm.cycle(time_us);
-  toggle.set(false);
 }
 
 

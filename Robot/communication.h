@@ -23,6 +23,8 @@
 #if defined(MEGA)
 #define DEBUG_COMMUNICATION          // Debug serial communication debugging
 #endif
+#define DEBUG_LOW_LEVEL
+#define DEBUG_HIGH_LEVEL
 
 
 // Serial Communication Protocol (static)
@@ -318,12 +320,17 @@ public:
   RobotComm(Robot &robot, uint8_t channel);
   ~RobotComm();
 
+  void setPinComm(PinControl *pin);
+  void setPinCtrl(PinControl *pin);
+
   void cycle(uint32_t time_us);
   void cycle();
 
 private:
   Robot &robot;           // Robot controlled by this serial communication
   uint8_t channel;        // Serial channel used for communication
+  PinControl *pin_comm;   // Debug pin for communication timing
+  PinControl *pin_ctrl;   // Debug pin for control timing
 
   Timer timer;            // Internal timer for serial communication during control operations
   Timer timeout;          // Internal timer for serial communication receiving timeouts
