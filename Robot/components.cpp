@@ -8,34 +8,34 @@
 #if defined(UNO) || defined(MEGA)
 
 #if defined(UNO)
-static void PWMfreq::set(UnoTimer0 freq){
+void PWMfreq::set(UnoTimer0 freq){
   TCCR0B = (TCCR0B & 0b11111000) | ((uint8_t) freq);
 }
-static void PWMfreq::set(UnoTimer1 freq){
+void PWMfreq::set(UnoTimer1 freq){
   TCCR1B = (TCCR1B & 0b11111000) | ((uint8_t) freq);
 }
-static void PWMfreq::set(UnoTimer2 freq){
+void PWMfreq::set(UnoTimer2 freq){
   TCCR2B = (TCCR2B & 0b11111000) | ((uint8_t) freq);
 }
 #endif
 
 #if defined(MEGA)
-static void PWMfreq::set(MegaTimer0 freq){
+void PWMfreq::set(MegaTimer0 freq){
   TCCR0B = (TCCR0B & 0b11111000) | ((uint8_t) freq);
 }
-static void PWMfreq::set(MegaTimer1 freq){
+void PWMfreq::set(MegaTimer1 freq){
   TCCR1B = (TCCR1B & 0b11111000) | ((uint8_t) freq);
 }
-static void PWMfreq::set(MegaTimer2 freq){
+void PWMfreq::set(MegaTimer2 freq){
   TCCR2B = (TCCR2B & 0b11111000) | ((uint8_t) freq);
 }
-static void PWMfreq::set(MegaTimer3 freq){
+void PWMfreq::set(MegaTimer3 freq){
   TCCR3B = (TCCR3B & 0b11111000) | ((uint8_t) freq);
 }
-static void PWMfreq::set(MegaTimer4 freq){
+void PWMfreq::set(MegaTimer4 freq){
   TCCR4B = (TCCR4B & 0b11111000) | ((uint8_t) freq);
 }
-static void PWMfreq::set(MegaTimer5 freq){
+void PWMfreq::set(MegaTimer5 freq){
   TCCR5B = (TCCR5B & 0b11111000) | ((uint8_t) freq);
 }
 #endif
@@ -119,13 +119,13 @@ uint8_t PinControl::last_pwm(){
 // PinMeasure
 // ==================================================
 
-PinMeasure::PinMeasure(uint8_t pin, bool pullup = false){
+PinMeasure::PinMeasure(uint8_t pin, bool pullup){
   this->pin = pin;
   pinMode(pin, pullup ? INPUT_PULLUP : INPUT);
   setLimits(0.0, 0.0);
 }
 
-PinMeasure::PinMeasure(uint8_t pin, float v1, float v2, bool pullup = false){
+PinMeasure::PinMeasure(uint8_t pin, float v1, float v2, bool pullup){
   this->pin = pin;
   pinMode(pin, pullup ? INPUT_PULLUP : INPUT);
   setLimits(v1, v2);
@@ -287,18 +287,18 @@ Robot::Robot(PinControl &enable, uint8_t size, uint32_t ts_us)
   
   this->status = Status::Idle;
 
-  this->pids_div = malloc(size * sizeof(float));
-  this->pids_kp = malloc(size * sizeof(float));
-  this->pids_ki = malloc(size * sizeof(float));
-  this->pids_kd = malloc(size * sizeof(float));
-  this->pids_sat = malloc(size * sizeof(float));
-  this->pids_pole = malloc(size * sizeof(float));
+  this->pids_div = (float *) malloc(size * sizeof(float));
+  this->pids_kp = (float *) malloc(size * sizeof(float));
+  this->pids_ki = (float *) malloc(size * sizeof(float));
+  this->pids_kd = (float *) malloc(size * sizeof(float));
+  this->pids_sat = (float *) malloc(size * sizeof(float));
+  this->pids_pole = (float *) malloc(size * sizeof(float));
 
-  this->mot_encs = malloc(size * sizeof(long));
-  this->mot_pwms = malloc(size * sizeof(int16_t));
-  this->mot_refs = malloc(size * sizeof(long));
-  this->mot_ends = malloc(size * sizeof(bool));
-  this->mot_acts = malloc(size * sizeof(int16_t));
+  this->mot_encs = (long *) malloc(size * sizeof(long));
+  this->mot_pwms = (int16_t *) malloc(size * sizeof(int16_t));
+  this->mot_refs = (long *) malloc(size * sizeof(long));
+  this->mot_ends = (bool *) malloc(size * sizeof(bool));
+  this->mot_acts = (int16_t *) malloc(size * sizeof(int16_t));
   
   for(int i = 0; i < size; i++)
   {
@@ -343,7 +343,7 @@ Robot::Status Robot::getStatus(){
   return this->status;
 }
 
-bool Robot::setStatus(Status status, bool reset = false){
+bool Robot::setStatus(Status status, bool reset){
   if(this->status != status || reset){
     resetPIDs();
     resetActions();

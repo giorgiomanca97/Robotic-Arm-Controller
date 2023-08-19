@@ -1,8 +1,8 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#define PI 3.1415926535897932384626433832795028841971693993751058209
 
+#define UNUSED(arg) (void)(arg)
 
 #include <Arduino.h>
 #include <math.h>

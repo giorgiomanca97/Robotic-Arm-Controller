@@ -5,8 +5,10 @@
 // Communication
 // ==================================================
 
+HardwareSerial* Communication::hwserial = &Serial;
+
 #if defined(MEGA)
-static void Communication::channel(uint8_t index){
+void Communication::channel(uint8_t index){
   switch(index){
     case 0:
       hwserial = &Serial;
@@ -26,7 +28,7 @@ static void Communication::channel(uint8_t index){
   }
 }
 #else
-static void Communication::channel(uint8_t index){
+void Communication::channel(uint8_t index){
   switch(index){
     case 0:
       hwserial = &Serial;
@@ -38,14 +40,14 @@ static void Communication::channel(uint8_t index){
 }
 #endif
 
-static void Communication::flush(){
+void Communication::flush(){
   while(hwserial->available()) {
     hwserial->read();
   }
   hwserial->flush();
 }
 
-static bool Communication::peek(Communication::Header *hdr, Timer *timeout_us = NULL){
+bool Communication::peek(Communication::Header *hdr, Timer *timeout_us){
   if(hdr == NULL) return false;
   int res = -1;
   if(timeout_us == NULL) {
@@ -66,7 +68,7 @@ static bool Communication::peek(Communication::Header *hdr, Timer *timeout_us = 
   return true;
 }
 
-static bool Communication::rcv(Communication::Message *msg, Timer *timeout_us = NULL){
+bool Communication::rcv(Communication::Message *msg, Timer *timeout_us){
   if(msg == NULL) return false;
   uint8_t buffer[msg->size()];
   while(hwserial->available() < msg->size()) if(timeout_us != NULL && timeout_us->check(micros())) return false;
@@ -95,7 +97,7 @@ static bool Communication::rcv(Communication::Message *msg, Timer *timeout_us = 
   return valid;
 }
 
-static bool Communication::snd(Communication::Message *msg){
+bool Communication::snd(Communication::Message *msg){
   if(msg == NULL) return false;
   uint8_t buffer[msg->size()];
   msg->fill(buffer);
@@ -123,7 +125,7 @@ static bool Communication::snd(Communication::Message *msg){
   return valid;
 }
 
-static bool Communication::convert(uint8_t value, Communication::Code &code){
+bool Communication::convert(uint8_t value, Communication::Code &code){
   switch(value){
     case (uint8_t) Code::IDLE:
       code = Code::IDLE;
@@ -158,22 +160,22 @@ static bool Communication::convert(uint8_t value, Communication::Code &code){
   }
 }
 
-static bool Communication::isCtrl(Code code){
+bool Communication::isCtrl(Code code){
   uint8_t value = (uint8_t) code;
   return ((value & 0b10000) == 0) && ((value & 0b01000) == 0) && ((value & 0b00100) == 0);
 }
 
-static bool Communication::isSetup(Code code){
+bool Communication::isSetup(Code code){
   uint8_t value = (uint8_t) code;
   return ((value & 0b10000) != 0) && ((value & 0b01000) == 0) && ((value & 0b00100) == 0);
 }
 
-static bool Communication::isAck(Code code){
+bool Communication::isAck(Code code){
   uint8_t value = (uint8_t) code;
   return ((value & 0b10000) != 0) && ((value & 0b01000) != 0) && ((value & 0b00100) == 0);
 }
 
-static bool Communication::isError(Code code){
+bool Communication::isError(Code code){
   uint8_t value = (uint8_t) code;
   return ((value & 0b10000) != 0) && ((value & 0b01000) != 0) && ((value & 0b00100) != 0);
 }
@@ -272,10 +274,12 @@ uint8_t Communication::Message::size_payload(){
 }
 
 uint8_t Communication::Message::from_payload(uint8_t *buffer){
+  UNUSED(buffer);
   return size_payload();
 }
 
 uint8_t Communication::Message::fill_payload(uint8_t *buffer){
+  UNUSED(buffer);
   return size_payload();
 }
 
@@ -311,10 +315,12 @@ uint8_t Communication::MsgIDLE::size_payload(){
 }
 
 uint8_t Communication::MsgIDLE::from_payload(uint8_t *buffer){
+  UNUSED(buffer);
   return size_payload();
 }
 
 uint8_t Communication::MsgIDLE::fill_payload(uint8_t *buffer){
+  UNUSED(buffer);
   return size_payload();
 }
 
@@ -769,10 +775,12 @@ uint8_t Communication::MsgACKS::size_payload(){
 }
 
 uint8_t Communication::MsgACKS::from_payload(uint8_t *buffer){
+  UNUSED(buffer);
   return size_payload();
 }
 
 uint8_t Communication::MsgACKS::fill_payload(uint8_t *buffer){
+  UNUSED(buffer);
   return size_payload();
 }
 
@@ -799,10 +807,12 @@ uint8_t Communication::MsgERROR::size_payload(){
 }
 
 uint8_t Communication::MsgERROR::from_payload(uint8_t *buffer){
+  UNUSED(buffer);
   return size_payload();
 }
 
 uint8_t Communication::MsgERROR::fill_payload(uint8_t *buffer){
+  UNUSED(buffer);
   return size_payload();
 }
 
@@ -817,8 +827,8 @@ RobotComm::RobotComm(Robot &robot, uint8_t channel) :
   this->channel = channel;
   this->timer.setup(robot.getTimeSampling());
   this->timeout.setup(robot.getTimeSampling());
-  this->encoders_rcv = malloc(robot.getSize() * sizeof(long));
-  this->encoders_snd = malloc(robot.getSize() * sizeof(long));
+  this->encoders_rcv = (long *) malloc(robot.getSize() * sizeof(long));
+  this->encoders_snd = (long *) malloc(robot.getSize() * sizeof(long));
 
   for(int i = 0; i < robot.getSize(); i++) {
     this->encoders_rcv[i] = 0;
@@ -1118,17 +1128,17 @@ void RobotComm::cycle(uint32_t time_us){
             Serial.print("  index: ");
             Serial.println(msg_pid.getIndex());
             Serial.print("  div: ");
-            Serial.print(msg_pid.getPidDiv(), 3);
+            Serial.println(msg_pid.getPidDiv(), 3);
             Serial.print("  kp: ");
-            Serial.print(msg_pid.getPidKp(), 3);
+            Serial.println(msg_pid.getPidKp(), 3);
             Serial.print("  ki: ");
-            Serial.print(msg_pid.getPidKi(), 3);
+            Serial.println(msg_pid.getPidKi(), 3);
             Serial.print("  kd: ");
-            Serial.print(msg_pid.getPidKd(), 3);
+            Serial.println(msg_pid.getPidKd(), 3);
             Serial.print("  sat: ");
-            Serial.print(msg_pid.getPidSat(), 3);
+            Serial.println(msg_pid.getPidSat(), 3);
             Serial.print("  pole: ");
-            Serial.print(msg_pid.getPidPole(), 3);
+            Serial.println(msg_pid.getPidPole(), 3);
             #endif
             msg_acks.setIndex(msg_pid.getIndex());
             break;

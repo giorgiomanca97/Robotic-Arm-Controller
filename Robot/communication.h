@@ -29,7 +29,7 @@
 
 // Serial Communication Protocol (static)
 class Communication {
-  inline static HardwareSerial *hwserial = &Serial;
+  static HardwareSerial *hwserial;
 
 public:
   Communication() = delete;

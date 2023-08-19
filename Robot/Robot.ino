@@ -14,7 +14,7 @@
 // 1: Controller
 // 2: Debugger
 
-#if !defined(MEGA)
+#if !defined(MEGA) || SELECT_SKETCH <= 0 || SELECT_SKETCH > 2
 
 #ifdef SELECT_SKETCH
 #undef SELECT_SKETCH

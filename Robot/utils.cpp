@@ -4,7 +4,7 @@
 // Functions
 // ==================================================
 
-float remap(float v, float a1, float b1, float a2, float b2, bool clamp = false) {
+float remap(float v, float a1, float b1, float a2, float b2, bool clamp) {
   float res = a2 + (v - a1) / (b1 - a1) * (b2 - a2);
   if(clamp){
     if(a2 <= b2) {
@@ -17,14 +17,14 @@ float remap(float v, float a1, float b1, float a2, float b2, bool clamp = false)
   }
 }
 
-float remap( long v,  long a1,  long b1, float a2, float b2, bool clamp = false){
+float remap( long v,  long a1,  long b1, float a2, float b2, bool clamp){
   return remap((float) v, (float) a1, (float) b1, a2, b2, clamp);
 }
 
-long remap(float v, float a1, float b1,  long a2,  long b2, bool clamp = false){
+long remap(float v, float a1, float b1,  long a2,  long b2, bool clamp){
   return round(remap(v, a1, b1, (float) a2, (float) b2, clamp));
 }
-long remap( long v,  long a1,  long b1,  long a2,  long b2, bool clamp = false){
+long remap( long v,  long a1,  long b1,  long a2,  long b2, bool clamp){
   return round(remap((float) v, (float) a1, (float) b1, (float) a2, (float) b2, clamp));
 }
 

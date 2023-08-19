@@ -72,7 +72,7 @@
 // ============================================================
 
 // Control
-#define TS_US       250000  // Control time sampling (microseconds)
+#define TS_US       10000   // Control time sampling (microseconds)
 
 #define PID_1_DIV   1000.0  // Motor 1 PID encoder error divider
 #define PID_1_KP    1.0     // Motor 1 PID proportional coefficient
@@ -201,15 +201,22 @@ void setup()
     case 0:
       Serial.begin(BAUDRATE);
       Serial.flush();
+      break;
+      
     case 1:
       Serial1.begin(BAUDRATE);
       Serial1.flush();
+      break;
+
     case 2:
       Serial2.begin(BAUDRATE);
       Serial2.flush();
+      break;
+
     case 3:
       Serial3.begin(BAUDRATE);
       Serial3.flush();
+      break;
   }
 
   #if defined(DEBUG_SERIAL_ENABLE)
