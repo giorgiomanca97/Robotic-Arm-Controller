@@ -64,32 +64,25 @@ classdef Communication
             switch(hdr.getCode())
                 case Code.IDLE
                     msg = MsgIDLE();
-                    msg.setCount(hdr.getCount());
                 case Code.PWM
                     msg = MsgPWM();
-                    msg.setCount(hdr.getCount());
                 case Code.REF
                     msg = MsgREF();
-                    msg.setCount(hdr.getCount());
                 case Code.ROBOT
                     msg = MsgROBOT();
-                    msg.setCount(hdr.getCount());
                 case Code.MOTOR
                     msg = MsgMOTOR();
-                    msg.setIndex(hdr.getIndex());
                 case Code.PID
                     msg = MsgPID();
-                    msg.setIndex(hdr.getIndex());
                 case Code.ACKC
                     msg = MsgACKC();
-                    msg.setCount(hdr.getCount());
                 case Code.ACKS
                     msg = MsgACKS();
-                    msg.setNum(hdr.getNum());
                 case Code.ERROR
                     msg = MsgERROR();
-                    msg.setNum(hdr.getNum());
             end
+
+            msg.setNum(hdr.getNum());
 
             if(timeout_us > 0)
                 while(obj.Serial.NumBytesAvailable < msg.bsize() && toc(time) * 1e6 <= delta)

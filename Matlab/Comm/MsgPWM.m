@@ -91,9 +91,9 @@ classdef MsgPWM < Message
             end
 
             for k = 1:obj.getCount()
-                s = 1 - 2 * (bitand(data(1), bitshift(1, k-1, 'uint8'), 'uint8') > 0);
-                v = int16(data(1+k));
-                obj.setPwm(k, s*v);
+                sgn = 1 - 2 * (bitand(data(1), bitshift(1, k-1, 'uint8'), 'uint8') > 0);
+                val = int16(data(1+k));
+                obj.setPwm(k, sgn*val);
             end
 
             res = true;

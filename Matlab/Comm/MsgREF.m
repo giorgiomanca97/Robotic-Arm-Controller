@@ -91,7 +91,7 @@ classdef MsgREF < Message
             end
 
             for k = 1:obj.getCount()
-                sgn = 1 - 2 * bitand(data(1), bitshift(1, k-1, 'uint8') , 'uint8');
+                sgn = 1 - 2 * bitand(data(1), bitshift(1, k-1));
                 val = int16(data(1+k));
                 obj.setDeltaEnc(k, sgn*val);
             end
@@ -107,9 +107,9 @@ classdef MsgREF < Message
             data = zeros([1, obj.bsize_payload()], 'uint8');
 
             for k = 1:obj.getCount()
-                pwm = obj.getDeltaEnc(k);
-                data(1) = bitor(data(1), bitshift(pwm<0, k-1, 'uint8'), 'uint8');
-                data(1+k) = uint8(abs(pwm));
+                enc = obj.getDeltaEnc(k);
+                data(1) = bitor(data(1), bitshift(uint8(enc<0), k-1));
+                data(1+k) = uint8(abs(enc));
             end
         end
     end

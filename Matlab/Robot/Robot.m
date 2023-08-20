@@ -132,7 +132,7 @@ classdef Robot < handle
             end
 
             msg = MsgREF();
-            msg.setCount(obl.N);
+            msg.setCount(obj.N);
             for k = 1:obj.N
                 msg.setDeltaEnc(k, int64(encs(k)) - obj.Encs(k));
             end
@@ -158,7 +158,7 @@ classdef Robot < handle
             end
 
             msg = MsgROBOT();
-            msg.setCount(obl.N);
+            msg.setCount(obj.N);
             msg.setTimeSampling(ts_us);
             ts_us = msg.getTimeSampling();
 
@@ -188,11 +188,11 @@ classdef Robot < handle
 
             msg = MsgMOTOR();
             msg.setIndex(index-1);
-            msg.setChangeSpinDir(spin_dir ~= 0);
-            msg.setInvertSpinDir(spin_dir < 0);
-            msg.setChangeEncDir(enc_dir ~= 0);
-            msg.setInvertEncDir(enc_dir < 0);
             msg.setChangeEncoder(true);
+            msg.setInvertSpinDir(spin_dir < 0);
+            msg.setChangeSpinDir(spin_dir ~= 0);
+            msg.setInvertEncDir(enc_dir < 0);
+            msg.setChangeEncDir(enc_dir ~= 0);
             msg.setEncoderValue(enc);
             enc = msg.getEncoderValue();
 

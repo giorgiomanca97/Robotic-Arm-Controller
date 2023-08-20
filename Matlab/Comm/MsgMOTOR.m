@@ -101,7 +101,7 @@ classdef MsgMOTOR < Message
     methods (Access = public)
         function res = setIndex(obj, index)
             arguments 
-                obj (1,1) MsgACKS;
+                obj (1,1) MsgMOTOR;
                 index (1,1) {mustBeInteger};
             end
             
@@ -226,11 +226,11 @@ classdef MsgMOTOR < Message
 
             data = zeros([1, obj.bsize_payload()], 'uint8');
 
-            data(1) = data(1) + int8(bitshift(obj.getChangeEncoder(), 0));
-            data(1) = data(1) + int8(bitshift(obj.getInvertSpinDir(), 1));
-            data(1) = data(1) + int8(bitshift(obj.getChangeSpinDir(), 2));
-            data(1) = data(1) + int8(bitshift(obj.getInvertEncDir() , 3));
-            data(1) = data(1) + int8(bitshift(obj.getChangeEncDir() , 4));
+            data(1) = data(1) + uint8(bitshift(uint8(obj.getChangeEncoder()), 0));
+            data(1) = data(1) + uint8(bitshift(uint8(obj.getInvertSpinDir()), 1));
+            data(1) = data(1) + uint8(bitshift(uint8(obj.getChangeSpinDir()), 2));
+            data(1) = data(1) + uint8(bitshift(uint8(obj.getInvertEncDir()) , 3));
+            data(1) = data(1) + uint8(bitshift(uint8(obj.getChangeEncDir()) , 4));
             data(2:5) = Message.valueToBytes(obj.getEncoderValue(), 'int32');
         end
     end
