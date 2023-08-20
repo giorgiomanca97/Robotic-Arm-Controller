@@ -117,7 +117,7 @@
 #define PID_6_POLE  10.0    // Motor 6 PID dirty derivative pole
 
 // Serial Communication
-#define CHANNEL     1       // Serial channel
+#define CHANNEL     0       // Serial channel
 #define BAUDRATE    115200  // Serial baudrate
 
 // Debug
@@ -196,7 +196,7 @@ void setup()
   PWMfreq::set(PWMfreq::MegaTimer3::FREQ_3921_16);
   PWMfreq::set(PWMfreq::MegaTimer4::FREQ_3921_16);
 
-  SerialComm::start(CHANNEL, DEBUG_BAUDRATE);
+  SerialComm::start(CHANNEL, BAUDRATE);
 
   #if defined(DEBUG_COMMUNICATION)
   SerialComm::start(DEBUG_CHANNEL, DEBUG_BAUDRATE);

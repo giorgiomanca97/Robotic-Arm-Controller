@@ -9,25 +9,7 @@ HardwareSerial* Communication::hwserial = &Serial;
 
 
 void Communication::channel(uint8_t index){
-  switch(index){
-    case 0:
-      hwserial = &Serial;
-      break;
-    #if defined(MEGA)
-    case 1:
-      hwserial = &Serial1;
-      break;
-    case 2:
-      hwserial = &Serial2;
-      break;
-    case 3:
-      hwserial = &Serial3;
-      break;
-    #endif
-    default:
-      hwserial = &Serial;
-      break;
-  }
+  hwserial = SerialComm::port(index);
 }
 
 
@@ -453,15 +435,15 @@ uint8_t Communication::MsgMOTOR::getIndex(){
 }
 
 bool Communication::MsgMOTOR::getChangeEncoder(){
-  return flags & (1u << 0);
+  return flags & (1 << 0);
 }
 
 bool Communication::MsgMOTOR::getInvertSpinDir(){
-  return flags & (1u << 1);
+  return flags & (1 << 1);
 }
 
 bool Communication::MsgMOTOR::getChangeSpinDir(){
-  return flags & (1u << 2);
+  return flags & (1 << 2);
 }
 
 int8_t Communication::MsgMOTOR::getSpinDirection(){
@@ -469,11 +451,11 @@ int8_t Communication::MsgMOTOR::getSpinDirection(){
 }
 
 bool Communication::MsgMOTOR::getInvertEncDir(){
-  return flags & (1u << 3);
+  return flags & (1 << 3);
 }
 
 bool Communication::MsgMOTOR::getChangeEncDir(){
-  return flags & (1u << 4);
+  return flags & (1 << 4);
 }
 
 int8_t Communication::MsgMOTOR::getEncDirection(){
@@ -489,17 +471,17 @@ bool Communication::MsgMOTOR::setIndex(uint8_t index){
 }
 
 bool Communication::MsgMOTOR::setChangeEncoder(bool value){
-  flags = flags | (value << 0);
+  flags = (flags & ~(1 << 0)) | (value << 0);
   return true;
 }
 
 bool Communication::MsgMOTOR::setInvertSpinDir(bool value){
-  flags = flags | (value << 1);
+  flags = (flags & ~(1 << 1)) | (value << 1);
   return true;
 }
 
 bool Communication::MsgMOTOR::setChangeSpinDir(bool value){
-  flags = flags | (value << 2);
+  flags = (flags & ~(1 << 2)) | (value << 2);
   return true;
 }
 
@@ -510,12 +492,12 @@ bool Communication::MsgMOTOR::setSpinDirection(int8_t dir){
 }
 
 bool Communication::MsgMOTOR::setInvertEncDir(bool value){
-  flags = flags | (value << 3);
+  flags = (flags & ~(1 << 3)) | (value << 3);
   return true;
 }
 
 bool Communication::MsgMOTOR::setChangeEncDir(bool value){
-  flags = flags | (value << 4);
+  flags = (flags & ~(1 << 4)) | (value << 4);
   return true;
 }
 
@@ -536,13 +518,13 @@ uint8_t Communication::MsgMOTOR::size_payload(){
 
 uint8_t Communication::MsgMOTOR::from_payload(uint8_t *buffer){
   bool ec;
-  int16_t sd;
-  int16_t ed;
+  int8_t sd;
+  int8_t ed;
   int32_t ev;
-  ec = (buffer[1] & (1 << 0));
-  sd = (buffer[1] & (1 << 2)) ? ((buffer[1] & (1 << 1)) ? -1 : +1) : 0;
-  ed = (buffer[1] & (1 << 3)) ? ((buffer[1] & (1 << 4)) ? -1 : +1) : 0;
-  memcpy((void *) &ev , (void *) (buffer + 1), 4);
+  ec = ((buffer[1] & (1 << 0)) > 0);
+  sd = ((buffer[1] & (1 << 2)) > 0) ? (((buffer[1] & (1 << 1)) > 0) ? -1 : +1) : 0;
+  ed = ((buffer[1] & (1 << 4)) > 0) ? (((buffer[1] & (1 << 3)) > 0) ? -1 : +1) : 0;
+  memcpy((void *) &ev , (void *) (buffer + 2), 4);
   setChangeEncoder(ec);
   setSpinDirection(sd);
   setEncDirection(ed);
@@ -552,15 +534,15 @@ uint8_t Communication::MsgMOTOR::from_payload(uint8_t *buffer){
 
 uint8_t Communication::MsgMOTOR::fill_payload(uint8_t *buffer){
   bool ec;
-  int16_t sd;
-  int16_t ed;
+  int8_t sd;
+  int8_t ed;
   int32_t ev;
   ec = getChangeEncoder();
   sd = getSpinDirection();
   ed = getEncDirection();
   ev = getEncoderValue(); 
-  buffer[1] = ((ed == 0) << 4) | ((ed == -1) << 3) | ((sd == 0) << 2) | ((sd == -1) << 1) | (ec << 0);
-  memcpy((void *) (buffer + 1), (void *) &ev , 4);
+  buffer[1] = ((ed != 0) << 4) | ((ed < 0) << 3) | ((sd != 0) << 2) | ((sd < 0) << 1) | (ec << 0);
+  memcpy((void *) (buffer + 2), (void *) &ev , 4);
   return size_payload();
 }
 
@@ -1014,7 +996,7 @@ void RobotComm::cycle(uint32_t time_us){
           DEBUG_SERIAL.print("Encoder rcv:");
           for(uint8_t i = 0; i < robot.getSize(); i++){
             DEBUG_SERIAL.print(" ");
-            DEBUG_SERIAL.print(encoders_snd[i]);
+            DEBUG_SERIAL.print(encoders_rcv[i]);
           }
           DEBUG_SERIAL.println();
           #endif

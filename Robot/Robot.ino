@@ -15,7 +15,7 @@
 // 2: Debugger
 // 3: Repeater
 
-#if !defined(MEGA) || SELECT_SKETCH <= 0 || SELECT_SKETCH > 2
+#if !defined(MEGA) || SELECT_SKETCH <= 0 || SELECT_SKETCH > 3
 
 #ifdef SELECT_SKETCH
 #undef SELECT_SKETCH

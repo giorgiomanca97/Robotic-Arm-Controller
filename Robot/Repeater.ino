@@ -34,8 +34,8 @@
 // ============================================================
 
 PinControl toggle = PinControl(PIN_TOGGLE);
-HardwareSerial serial_in;
-HardwareSerial serial_out;
+HardwareSerial *serial_in;
+HardwareSerial *serial_out;
 
 
 // ============================================================
@@ -45,8 +45,8 @@ HardwareSerial serial_out;
 void setup() {
   toggle.set(true);
 
-  serial_in = SerialComm.port(CHANNEL_IN);
-  serial_out = SerialComm.port(CHANNEL_OUT);
+  serial_in = SerialComm::port(CHANNEL_IN);
+  serial_out = SerialComm::port(CHANNEL_OUT);
 
   SerialComm::start(CHANNEL_IN, BAUDRATE_IN);
   SerialComm::start(CHANNEL_OUT, BAUDRATE_OUT);
@@ -63,10 +63,10 @@ void loop() {
   if(serial_in->available() > 0) {
     toggle.set(true);
     while(serial_in->available() > 0) {
-      serial_out.write((uint8_t) serial_in.read());
+      serial_out->write((uint8_t) serial_in->read());
     }
-    toggle.set(false);
   }
+  toggle.set(false);
 }
 
 
