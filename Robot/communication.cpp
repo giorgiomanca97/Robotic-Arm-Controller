@@ -7,12 +7,13 @@
 
 HardwareSerial* Communication::hwserial = &Serial;
 
-#if defined(MEGA)
+
 void Communication::channel(uint8_t index){
   switch(index){
     case 0:
       hwserial = &Serial;
       break;
+    #if defined(MEGA)
     case 1:
       hwserial = &Serial1;
       break;
@@ -22,23 +23,13 @@ void Communication::channel(uint8_t index){
     case 3:
       hwserial = &Serial3;
       break;
+    #endif
     default:
       hwserial = &Serial;
       break;
   }
 }
-#else
-void Communication::channel(uint8_t index){
-  switch(index){
-    case 0:
-      hwserial = &Serial;
-      break;
-    default:
-      hwserial = &Serial;
-      break;
-  }
-}
-#endif
+
 
 void Communication::flush(){
   while(hwserial->available()) {
@@ -61,9 +52,9 @@ bool Communication::peek(Communication::Header *hdr, Timer *timeout_us){
   if(res == -1) return false;
   hdr->parse(res);
   #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_LOW_LEVEL)
-  Serial.print("peek: ");
-  Serial.print((uint8_t) hdr->getCode());
-  Serial.println();
+  DEBUG_SERIAL.print("peek: ");
+  DEBUG_SERIAL.print((uint8_t) hdr->getCode());
+  DEBUG_SERIAL.println();
   #endif
   return true;
 }
@@ -78,21 +69,21 @@ bool Communication::rcv(Communication::Message *msg, Timer *timeout_us){
   if(hwserial->readBytes(buffer, msg->size()) != msg->size()) return false;
   bool valid = msg->from(buffer);
   #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_LOW_LEVEL)
-  Serial.print("rcv: ");
-  Serial.print((uint8_t) msg->getCode());
-  Serial.print(" ");
-  Serial.print(msg->size());
-  Serial.print(" ");
-  Serial.print(available);
-  Serial.print(" |");
+  DEBUG_SERIAL.print("rcv: ");
+  DEBUG_SERIAL.print((uint8_t) msg->getCode());
+  DEBUG_SERIAL.print(" ");
+  DEBUG_SERIAL.print(msg->size());
+  DEBUG_SERIAL.print(" ");
+  DEBUG_SERIAL.print(available);
+  DEBUG_SERIAL.print(" |");
   for(int i = 0; i < msg->size(); i++){
     char hhex, lhex;
     byteToHex(buffer[i], hhex, lhex);
-    Serial.print(" ");
-    Serial.print(hhex);
-    Serial.print(lhex);
+    DEBUG_SERIAL.print(" ");
+    DEBUG_SERIAL.print(hhex);
+    DEBUG_SERIAL.print(lhex);
   }
-  Serial.println();
+  DEBUG_SERIAL.println();
   #endif
   return valid;
 }
@@ -106,21 +97,21 @@ bool Communication::snd(Communication::Message *msg){
   #endif
   bool valid = hwserial->write(buffer, msg->size()) == msg->size();
   #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_LOW_LEVEL)
-  Serial.print("snd: ");
-  Serial.print((uint8_t) msg->getCode());
-  Serial.print(" ");
-  Serial.print(msg->size());
-  Serial.print(" ");
-  Serial.print(available);
-  Serial.print(" |");
+  DEBUG_SERIAL.print("snd: ");
+  DEBUG_SERIAL.print((uint8_t) msg->getCode());
+  DEBUG_SERIAL.print(" ");
+  DEBUG_SERIAL.print(msg->size());
+  DEBUG_SERIAL.print(" ");
+  DEBUG_SERIAL.print(available);
+  DEBUG_SERIAL.print(" |");
   for(int i = 0; i < msg->size(); i++){
     char hhex, lhex;
     byteToHex(buffer[i], hhex, lhex);
-    Serial.print(" ");
-    Serial.print(hhex);
-    Serial.print(lhex);
+    DEBUG_SERIAL.print(" ");
+    DEBUG_SERIAL.print(hhex);
+    DEBUG_SERIAL.print(lhex);
   }
-  Serial.println();
+  DEBUG_SERIAL.println();
   #endif
   return valid;
 }
@@ -872,28 +863,28 @@ void RobotComm::cycle(uint32_t time_us){
         if(this->pin_ctrl != NULL) this->pin_ctrl->set(true);
 
         #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-        Serial.print("Receiving Control ");
+        DEBUG_SERIAL.print("Receiving Control ");
         #endif
         
         switch(code){
           case Communication::Code::IDLE:
             {
               #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-              Serial.println("IDLE");
+              DEBUG_SERIAL.println("IDLE");
               #endif
               Communication::MsgIDLE msg_idle;
               msg_idle.setCount(robot.getSize());
               res = Communication::rcv(&msg_idle, &timeout);
               res = res && msg_idle.getCount() == robot.getSize();
               #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-              Serial.print("  operation: ");
-              Serial.println(res ? "Succeded" : "Failed");
+              DEBUG_SERIAL.print("  operation: ");
+              DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
               #endif
               if(!res) break;
               robot.setStatus(Robot::Status::Idle);
               #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-              Serial.print("  count: ");
-              Serial.println(msg_idle.getCount());
+              DEBUG_SERIAL.print("  count: ");
+              DEBUG_SERIAL.println(msg_idle.getCount());
               #endif
               break;
             }
@@ -901,15 +892,15 @@ void RobotComm::cycle(uint32_t time_us){
           case Communication::Code::PWM:
             {
               #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-              Serial.println("PWM");
+              DEBUG_SERIAL.println("PWM");
               #endif
               Communication::MsgPWM msg_pwm;
               msg_pwm.setCount(robot.getSize());
               res = Communication::rcv(&msg_pwm, &timeout);
               res = res && msg_pwm.getCount() == robot.getSize();
               #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-              Serial.print("  operation: ");
-              Serial.println(res ? "Succeded" : "Failed");
+              DEBUG_SERIAL.print("  operation: ");
+              DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
               #endif
               if(!res) break;
               robot.setStatus(Robot::Status::Pwm);
@@ -917,13 +908,13 @@ void RobotComm::cycle(uint32_t time_us){
                 robot.setPwm(i, msg_pwm.getPwm(i));
               }
               #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-              Serial.print("  count: ");
-              Serial.println(msg_pwm.getCount());
+              DEBUG_SERIAL.print("  count: ");
+              DEBUG_SERIAL.println(msg_pwm.getCount());
               for(int i = 0; i < msg_pwm.getCount(); i++) {
-                Serial.print("  pmw ");
-                Serial.print(i);
-                Serial.print(": ");
-                Serial.println(msg_pwm.getPwm(i));
+                DEBUG_SERIAL.print("  pmw ");
+                DEBUG_SERIAL.print(i);
+                DEBUG_SERIAL.print(": ");
+                DEBUG_SERIAL.println(msg_pwm.getPwm(i));
               }
               #endif
               break;
@@ -932,15 +923,15 @@ void RobotComm::cycle(uint32_t time_us){
           case Communication::Code::REF:
             {
               #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-              Serial.println("REF");
+              DEBUG_SERIAL.println("REF");
               #endif
               Communication::MsgREF msg_ref;
               msg_ref.setCount(robot.getSize());
               res = Communication::rcv(&msg_ref, &timeout);
               res = res && msg_ref.getCount() == robot.getSize();
               #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-              Serial.print("  operation: ");
-              Serial.println(res ? "Succeded" : "Failed");
+              DEBUG_SERIAL.print("  operation: ");
+              DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
               #endif
               if(!res) break;
               robot.setStatus(Robot::Status::Ref);
@@ -949,13 +940,13 @@ void RobotComm::cycle(uint32_t time_us){
                 robot.setTarget(i, encoders_rcv[i]);
               }
               #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-              Serial.print("  count: ");
-              Serial.println(msg_ref.getCount());
+              DEBUG_SERIAL.print("  count: ");
+              DEBUG_SERIAL.println(msg_ref.getCount());
               for(int i = 0; i < msg_ref.getCount(); i++) {
-                Serial.print("  denc ");
-                Serial.print(i);
-                Serial.print(": ");
-                Serial.println(msg_ref.getDeltaEnc(i));
+                DEBUG_SERIAL.print("  denc ");
+                DEBUG_SERIAL.print(i);
+                DEBUG_SERIAL.print(": ");
+                DEBUG_SERIAL.println(msg_ref.getDeltaEnc(i));
               }
               #endif
               break;
@@ -963,7 +954,7 @@ void RobotComm::cycle(uint32_t time_us){
 
           default:
             #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-            Serial.println("Unexpected");
+            DEBUG_SERIAL.println("Unexpected");
             #endif
             res = false;
             break;
@@ -981,26 +972,26 @@ void RobotComm::cycle(uint32_t time_us){
           }
 
           #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-          Serial.println("Sending Control ACKC");
+          DEBUG_SERIAL.println("Sending Control ACKC");
           #endif
 
           res = Communication::snd(&msg_ackc);
 
           #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-          Serial.print("  operation: ");
-          Serial.println(res ? "Succeded" : "Failed");
-          Serial.print("  count: ");
-          Serial.println(msg_ackc.getCount());
-          Serial.print("  endstops:");
+          DEBUG_SERIAL.print("  operation: ");
+          DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
+          DEBUG_SERIAL.print("  count: ");
+          DEBUG_SERIAL.println(msg_ackc.getCount());
+          DEBUG_SERIAL.print("  endstops:");
           for(uint8_t i = 0; i < robot.getSize(); i++){
-            Serial.print(msg_ackc.getEndStop(i) ? " 1" : " 0");
+            DEBUG_SERIAL.print(msg_ackc.getEndStop(i) ? " 1" : " 0");
           }
-          Serial.println();
+          DEBUG_SERIAL.println();
           for(uint8_t i = 0; i < robot.getSize(); i++){
-            Serial.print("  denc ");
-            Serial.print(i);
-            Serial.print(": ");
-            Serial.println(msg_ackc.getDeltaEnc(i));
+            DEBUG_SERIAL.print("  denc ");
+            DEBUG_SERIAL.print(i);
+            DEBUG_SERIAL.print(": ");
+            DEBUG_SERIAL.println(msg_ackc.getDeltaEnc(i));
           }
           #endif
 
@@ -1011,30 +1002,30 @@ void RobotComm::cycle(uint32_t time_us){
           }
 
           #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-          Serial.print("Encoder rob:");
+          DEBUG_SERIAL.print("Encoder rob:");
           for(uint8_t i = 0; i < robot.getSize(); i++){
-            Serial.print(" ");
-            Serial.print(robot.getEncoder(i));
+            DEBUG_SERIAL.print(" ");
+            DEBUG_SERIAL.print(robot.getEncoder(i));
           }
-          Serial.println();
+          DEBUG_SERIAL.println();
           #endif
 
           #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-          Serial.print("Encoder rcv:");
+          DEBUG_SERIAL.print("Encoder rcv:");
           for(uint8_t i = 0; i < robot.getSize(); i++){
-            Serial.print(" ");
-            Serial.print(encoders_snd[i]);
+            DEBUG_SERIAL.print(" ");
+            DEBUG_SERIAL.print(encoders_snd[i]);
           }
-          Serial.println();
+          DEBUG_SERIAL.println();
           #endif
 
           #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-          Serial.print("Encoder snd:");
+          DEBUG_SERIAL.print("Encoder snd:");
           for(uint8_t i = 0; i < robot.getSize(); i++){
-            Serial.print(" ");
-            Serial.print(encoders_snd[i]);
+            DEBUG_SERIAL.print(" ");
+            DEBUG_SERIAL.print(encoders_snd[i]);
           }
-          Serial.println();
+          DEBUG_SERIAL.println();
           #endif
         }
 
@@ -1047,31 +1038,31 @@ void RobotComm::cycle(uint32_t time_us){
       Communication::MsgACKS msg_acks;
 
       #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-      Serial.print("Receiving Setup ");
+      DEBUG_SERIAL.print("Receiving Setup ");
       #endif
 
       switch(code){
         case Communication::Code::ROBOT:
           {
             #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-            Serial.println("ROBOT");
+            DEBUG_SERIAL.println("ROBOT");
             #endif
             Communication::MsgROBOT msg_robot;
             res = Communication::rcv(&msg_robot, &timeout);
             res = res && msg_robot.getCount() == robot.getSize();
             #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-            Serial.print("  operation: ");
-            Serial.println(res ? "Succeded" : "Failed");
+            DEBUG_SERIAL.print("  operation: ");
+            DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
             #endif
             if(!res) break;
             robot.setTimeSampling(msg_robot.getTimeSampling());
             timer.setup(msg_robot.getTimeSampling());
             timeout.setup(msg_robot.getTimeSampling());
             #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-            Serial.print("  count: ");
-            Serial.println(msg_robot.getCount());
-            Serial.print("  time-sampling: ");
-            Serial.println(msg_robot.getTimeSampling());
+            DEBUG_SERIAL.print("  count: ");
+            DEBUG_SERIAL.println(msg_robot.getCount());
+            DEBUG_SERIAL.print("  time-sampling: ");
+            DEBUG_SERIAL.println(msg_robot.getTimeSampling());
             #endif
             msg_acks.setCount(robot.getSize());
             break;
@@ -1080,29 +1071,29 @@ void RobotComm::cycle(uint32_t time_us){
         case Communication::Code::MOTOR:
           {
             #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-            Serial.println("MOTOR");
+            DEBUG_SERIAL.println("MOTOR");
             #endif
             Communication::MsgMOTOR msg_motor;
             res = Communication::rcv(&msg_motor, &timeout);
             res = res && msg_motor.getIndex() < robot.getSize();
             #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-            Serial.print("  operation: ");
-            Serial.println(res ? "Succeded" : "Failed");
+            DEBUG_SERIAL.print("  operation: ");
+            DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
             #endif
             if(!res) break;
             if(msg_motor.getChangeEncoder()) robot.setEncoder(msg_motor.getIndex(), msg_motor.getEncoderValue());
             if(msg_motor.getChangeSpinDir()) robot.invertMotor(msg_motor.getIndex(), msg_motor.getInvertSpinDir());
             if(msg_motor.getChangeEncDir()) robot.invertEncoder(msg_motor.getIndex(), msg_motor.getInvertEncDir());
             #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-            Serial.print("  index: ");
-            Serial.println(msg_motor.getIndex());
-            Serial.print("  encoder: ");
-            Serial.print(msg_motor.getChangeEncoder() ? "1 " : "0 ");
-            Serial.println(msg_motor.getEncoderValue());
-            Serial.print("  spin dir: ");
-            Serial.println(msg_motor.getSpinDirection());
-            Serial.print("  enc dir: ");
-            Serial.println(msg_motor.getEncDirection());
+            DEBUG_SERIAL.print("  index: ");
+            DEBUG_SERIAL.println(msg_motor.getIndex());
+            DEBUG_SERIAL.print("  encoder: ");
+            DEBUG_SERIAL.print(msg_motor.getChangeEncoder() ? "1 " : "0 ");
+            DEBUG_SERIAL.println(msg_motor.getEncoderValue());
+            DEBUG_SERIAL.print("  spin dir: ");
+            DEBUG_SERIAL.println(msg_motor.getSpinDirection());
+            DEBUG_SERIAL.print("  enc dir: ");
+            DEBUG_SERIAL.println(msg_motor.getEncDirection());
             #endif
             msg_acks.setIndex(msg_motor.getIndex());
             break;
@@ -1111,34 +1102,34 @@ void RobotComm::cycle(uint32_t time_us){
         case Communication::Code::PID:
           {
             #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-            Serial.println("PID");
+            DEBUG_SERIAL.println("PID");
             #endif
             Communication::MsgPID msg_pid;
             res = Communication::rcv(&msg_pid, &timeout);
             res = res && msg_pid.getIndex() < robot.getSize();
             #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-            Serial.print("  operation: ");
-            Serial.println(res ? "Succeded" : "Failed");
+            DEBUG_SERIAL.print("  operation: ");
+            DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
             #endif
             if(!res) break;
             robot.initPID(msg_pid.getIndex(), msg_pid.getPidSat(),  msg_pid.getPidPole());
             robot.setupPID(msg_pid.getIndex(), msg_pid.getPidDiv(), msg_pid.getPidKp(), msg_pid.getPidKi(), msg_pid.getPidKd());
             robot.resetPID(msg_pid.getIndex());
             #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-            Serial.print("  index: ");
-            Serial.println(msg_pid.getIndex());
-            Serial.print("  div: ");
-            Serial.println(msg_pid.getPidDiv(), 3);
-            Serial.print("  kp: ");
-            Serial.println(msg_pid.getPidKp(), 3);
-            Serial.print("  ki: ");
-            Serial.println(msg_pid.getPidKi(), 3);
-            Serial.print("  kd: ");
-            Serial.println(msg_pid.getPidKd(), 3);
-            Serial.print("  sat: ");
-            Serial.println(msg_pid.getPidSat(), 3);
-            Serial.print("  pole: ");
-            Serial.println(msg_pid.getPidPole(), 3);
+            DEBUG_SERIAL.print("  index: ");
+            DEBUG_SERIAL.println(msg_pid.getIndex());
+            DEBUG_SERIAL.print("  div: ");
+            DEBUG_SERIAL.println(msg_pid.getPidDiv(), 3);
+            DEBUG_SERIAL.print("  kp: ");
+            DEBUG_SERIAL.println(msg_pid.getPidKp(), 3);
+            DEBUG_SERIAL.print("  ki: ");
+            DEBUG_SERIAL.println(msg_pid.getPidKi(), 3);
+            DEBUG_SERIAL.print("  kd: ");
+            DEBUG_SERIAL.println(msg_pid.getPidKd(), 3);
+            DEBUG_SERIAL.print("  sat: ");
+            DEBUG_SERIAL.println(msg_pid.getPidSat(), 3);
+            DEBUG_SERIAL.print("  pole: ");
+            DEBUG_SERIAL.println(msg_pid.getPidPole(), 3);
             #endif
             msg_acks.setIndex(msg_pid.getIndex());
             break;
@@ -1146,7 +1137,7 @@ void RobotComm::cycle(uint32_t time_us){
 
         default:
           #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-          Serial.println("Unexpected");
+          DEBUG_SERIAL.println("Unexpected");
           #endif
           res = false;
           break;
@@ -1154,18 +1145,18 @@ void RobotComm::cycle(uint32_t time_us){
       
       if(res){
         #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-        Serial.println("Sending Setup ACKS");
+        DEBUG_SERIAL.println("Sending Setup ACKS");
         #endif
 
         res = Communication::snd(&msg_acks);
 
         #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-        Serial.print("  operation: ");
-        Serial.println(res ? "Succeded" : "Failed");
-        Serial.print("  count/index: ");
-        Serial.print(msg_acks.getCount());
-        Serial.print("/");
-        Serial.println(msg_acks.getIndex());
+        DEBUG_SERIAL.print("  operation: ");
+        DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
+        DEBUG_SERIAL.print("  count/index: ");
+        DEBUG_SERIAL.print(msg_acks.getCount());
+        DEBUG_SERIAL.print("/");
+        DEBUG_SERIAL.println(msg_acks.getIndex());
         #endif
       }
     }
@@ -1174,7 +1165,7 @@ void RobotComm::cycle(uint32_t time_us){
       res = false;
 
       #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-      Serial.println("Peeking Unexpected message");
+      DEBUG_SERIAL.println("Peeking Unexpected message");
       #endif
     }
 
@@ -1185,16 +1176,16 @@ void RobotComm::cycle(uint32_t time_us){
       msg_error.setCount(robot.getSize());
 
       #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-      Serial.println("Sending Error ERROR");
+      DEBUG_SERIAL.println("Sending Error ERROR");
       #endif
 
       res = Communication::snd(&msg_error);
 
       #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-      Serial.print("  operation: ");
-      Serial.println(res ? "Succeded" : "Failed");
-      Serial.print("  count: ");
-      Serial.println(msg_error.getCount());
+      DEBUG_SERIAL.print("  operation: ");
+      DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
+      DEBUG_SERIAL.print("  count: ");
+      DEBUG_SERIAL.println(msg_error.getCount());
       #endif
     }
   }
@@ -1203,7 +1194,7 @@ void RobotComm::cycle(uint32_t time_us){
     robot.setStatus(Robot::Status::Idle, true);
 
     #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-    Serial.println("Control timeout -> Robot IDLE");
+    DEBUG_SERIAL.println("Control timeout -> Robot IDLE");
     #endif
   }
 

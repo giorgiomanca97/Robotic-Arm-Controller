@@ -44,6 +44,43 @@ void PWMfreq::set(MegaTimer5 freq){
 
 
 // ==================================================
+// SerialComm
+// ==================================================
+
+#if defined(UNO) || defined(MEGA)
+
+HardwareSerial* SerialComm::port(uint8_t channel) {
+  switch(channel){
+    case 0:
+      return &Serial;
+    #if defined(MEGA)
+    case 1:
+      return &Serial1;
+    case 2:
+      return &Serial2;
+    case 3:
+      return &Serial3;
+    #endif
+    default:
+      return &Serial;
+  }
+}
+
+void SerialComm::start(uint8_t channel, uint32_t baudrate, uint8_t config) {
+  HardwareSerial *hwserial = port(channel);
+  hwserial->begin(baudrate, config);
+  hwserial->flush();
+}
+
+void SerialComm::close(uint8_t channel) {
+  HardwareSerial *hwserial = port(channel);
+  hwserial->flush();
+  hwserial->end();
+}
+
+#endif
+
+// ==================================================
 // PinControl
 // ==================================================
 

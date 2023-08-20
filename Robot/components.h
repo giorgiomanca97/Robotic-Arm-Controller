@@ -1,3 +1,4 @@
+#include "HardwareSerial.h"
 #ifndef COMPONENTS_H
 #define COMPONENTS_H
 
@@ -28,6 +29,9 @@
 #if defined(UNO) || defined(MEGA)
 class PWMfreq {
 public:
+  PWMfreq() = delete;
+  ~PWMfreq() = delete;
+
 #if defined(UNO)
   enum class UnoTimer0 : unsigned char{   // D5 & D6
     FREQ_62500_00 = 0b00000001, // set timer 0 divisor to     1 for PWM frequency of 62500.00 Hz
@@ -124,6 +128,19 @@ public:
   static void set(MegaTimer4 freq);
   static void set(MegaTimer5 freq);
 #endif
+};
+#endif
+
+
+#if defined(UNO) || defined(MEGA)
+class SerialComm {
+public:
+  SerialComm() = delete;
+  ~SerialComm() = delete;
+
+  static HardwareSerial* port(uint8_t channel);
+  static void start(uint8_t channel, uint32_t baudrate, uint8_t config = SERIAL_8N1);
+  static void close(uint8_t channel);
 };
 #endif
 

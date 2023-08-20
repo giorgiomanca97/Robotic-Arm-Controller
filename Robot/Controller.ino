@@ -122,8 +122,7 @@
 
 // Debug
 #if defined(DEBUG_COMMUNICATION)
-#define DEBUG_SERIAL_ENABLE
-#define DEBUG_SERIAL_BAUDRATE 115200
+#define DEBUG_BAUDRATE 115200
 #endif
 
 
@@ -197,31 +196,10 @@ void setup()
   PWMfreq::set(PWMfreq::MegaTimer3::FREQ_3921_16);
   PWMfreq::set(PWMfreq::MegaTimer4::FREQ_3921_16);
 
-  switch(CHANNEL) {
-    case 0:
-      Serial.begin(BAUDRATE);
-      Serial.flush();
-      break;
-      
-    case 1:
-      Serial1.begin(BAUDRATE);
-      Serial1.flush();
-      break;
+  SerialComm::start(CHANNEL, DEBUG_BAUDRATE);
 
-    case 2:
-      Serial2.begin(BAUDRATE);
-      Serial2.flush();
-      break;
-
-    case 3:
-      Serial3.begin(BAUDRATE);
-      Serial3.flush();
-      break;
-  }
-
-  #if defined(DEBUG_SERIAL_ENABLE)
-    Serial.begin(DEBUG_SERIAL_BAUDRATE);
-    Serial.flush();
+  #if defined(DEBUG_COMMUNICATION)
+  SerialComm::start(DEBUG_CHANNEL, DEBUG_BAUDRATE);
   #endif
 
   robot.setMotor(0, motor1);

@@ -13,6 +13,7 @@
 #define SELECT_SKETCH 1
 // 1: Controller
 // 2: Debugger
+// 3: Repeater
 
 #if !defined(MEGA) || SELECT_SKETCH <= 0 || SELECT_SKETCH > 2
 
