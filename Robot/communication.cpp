@@ -865,8 +865,7 @@ void RobotComm::cycle(uint32_t time_us){
               if(!res) break;
               robot.setStatus(Robot::Status::Idle);
               #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-              DEBUG_SERIAL.print("  count: ");
-              DEBUG_SERIAL.println(msg_idle.getCount());
+              DebugComm::print(&msg_idle, "", 1);
               #endif
               break;
             }
@@ -890,14 +889,7 @@ void RobotComm::cycle(uint32_t time_us){
                 robot.setPwm(i, msg_pwm.getPwm(i));
               }
               #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-              DEBUG_SERIAL.print("  count: ");
-              DEBUG_SERIAL.println(msg_pwm.getCount());
-              for(int i = 0; i < msg_pwm.getCount(); i++) {
-                DEBUG_SERIAL.print("  pmw ");
-                DEBUG_SERIAL.print(i);
-                DEBUG_SERIAL.print(": ");
-                DEBUG_SERIAL.println(msg_pwm.getPwm(i));
-              }
+              DebugComm::print(&msg_pwm, "", 1);
               #endif
               break;
             }
@@ -922,14 +914,7 @@ void RobotComm::cycle(uint32_t time_us){
                 robot.setTarget(i, encoders_rcv[i]);
               }
               #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-              DEBUG_SERIAL.print("  count: ");
-              DEBUG_SERIAL.println(msg_ref.getCount());
-              for(int i = 0; i < msg_ref.getCount(); i++) {
-                DEBUG_SERIAL.print("  denc ");
-                DEBUG_SERIAL.print(i);
-                DEBUG_SERIAL.print(": ");
-                DEBUG_SERIAL.println(msg_ref.getDeltaEnc(i));
-              }
+              DebugComm::print(&msg_ref, "", 1);
               #endif
               break;
             }
@@ -962,19 +947,7 @@ void RobotComm::cycle(uint32_t time_us){
           #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
           DEBUG_SERIAL.print("  operation: ");
           DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
-          DEBUG_SERIAL.print("  count: ");
-          DEBUG_SERIAL.println(msg_ackc.getCount());
-          DEBUG_SERIAL.print("  endstops:");
-          for(uint8_t i = 0; i < robot.getSize(); i++){
-            DEBUG_SERIAL.print(msg_ackc.getEndStop(i) ? " 1" : " 0");
-          }
-          DEBUG_SERIAL.println();
-          for(uint8_t i = 0; i < robot.getSize(); i++){
-            DEBUG_SERIAL.print("  denc ");
-            DEBUG_SERIAL.print(i);
-            DEBUG_SERIAL.print(": ");
-            DEBUG_SERIAL.println(msg_ackc.getDeltaEnc(i));
-          }
+          DebugComm::print(&msg_ackc, "", 1);
           #endif
 
           if(res) {
@@ -1041,10 +1014,7 @@ void RobotComm::cycle(uint32_t time_us){
             timer.setup(msg_robot.getTimeSampling());
             timeout.setup(msg_robot.getTimeSampling());
             #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-            DEBUG_SERIAL.print("  count: ");
-            DEBUG_SERIAL.println(msg_robot.getCount());
-            DEBUG_SERIAL.print("  time-sampling: ");
-            DEBUG_SERIAL.println(msg_robot.getTimeSampling());
+            DebugComm::print(&msg_robot, "", 1);
             #endif
             msg_acks.setCount(robot.getSize());
             break;
@@ -1063,19 +1033,19 @@ void RobotComm::cycle(uint32_t time_us){
             DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
             #endif
             if(!res) break;
-            if(msg_motor.getChangeEncoder()) robot.setEncoder(msg_motor.getIndex(), msg_motor.getEncoderValue());
-            if(msg_motor.getChangeSpinDir()) robot.invertMotor(msg_motor.getIndex(), msg_motor.getInvertSpinDir());
-            if(msg_motor.getChangeEncDir()) robot.invertEncoder(msg_motor.getIndex(), msg_motor.getInvertEncDir());
+            if(msg_motor.getChangeEncoder()) {
+              robot.setEncoder(msg_motor.getIndex(), msg_motor.getEncoderValue());
+              encoders_rcv[msg_motor.getIndex()] = msg_motor.getEncoderValue();
+              encoders_snd[msg_motor.getIndex()] = msg_motor.getEncoderValue();
+            }
+            if(msg_motor.getChangeSpinDir()) {
+              robot.invertMotor(msg_motor.getIndex(), msg_motor.getInvertSpinDir());
+            }
+            if(msg_motor.getChangeEncDir()) {
+              robot.invertEncoder(msg_motor.getIndex(), msg_motor.getInvertEncDir());
+            }
             #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-            DEBUG_SERIAL.print("  index: ");
-            DEBUG_SERIAL.println(msg_motor.getIndex());
-            DEBUG_SERIAL.print("  encoder: ");
-            DEBUG_SERIAL.print(msg_motor.getChangeEncoder() ? "1 " : "0 ");
-            DEBUG_SERIAL.println(msg_motor.getEncoderValue());
-            DEBUG_SERIAL.print("  spin dir: ");
-            DEBUG_SERIAL.println(msg_motor.getSpinDirection());
-            DEBUG_SERIAL.print("  enc dir: ");
-            DEBUG_SERIAL.println(msg_motor.getEncDirection());
+            DebugComm::print(&msg_motor, "", 1);
             #endif
             msg_acks.setIndex(msg_motor.getIndex());
             break;
@@ -1098,20 +1068,7 @@ void RobotComm::cycle(uint32_t time_us){
             robot.setupPID(msg_pid.getIndex(), msg_pid.getPidDiv(), msg_pid.getPidKp(), msg_pid.getPidKi(), msg_pid.getPidKd());
             robot.resetPID(msg_pid.getIndex());
             #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
-            DEBUG_SERIAL.print("  index: ");
-            DEBUG_SERIAL.println(msg_pid.getIndex());
-            DEBUG_SERIAL.print("  div: ");
-            DEBUG_SERIAL.println(msg_pid.getPidDiv(), 3);
-            DEBUG_SERIAL.print("  kp: ");
-            DEBUG_SERIAL.println(msg_pid.getPidKp(), 3);
-            DEBUG_SERIAL.print("  ki: ");
-            DEBUG_SERIAL.println(msg_pid.getPidKi(), 3);
-            DEBUG_SERIAL.print("  kd: ");
-            DEBUG_SERIAL.println(msg_pid.getPidKd(), 3);
-            DEBUG_SERIAL.print("  sat: ");
-            DEBUG_SERIAL.println(msg_pid.getPidSat(), 3);
-            DEBUG_SERIAL.print("  pole: ");
-            DEBUG_SERIAL.println(msg_pid.getPidPole(), 3);
+            DebugComm::print(&msg_pid, "", 1);
             #endif
             msg_acks.setIndex(msg_pid.getIndex());
             break;
@@ -1135,10 +1092,7 @@ void RobotComm::cycle(uint32_t time_us){
         #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
         DEBUG_SERIAL.print("  operation: ");
         DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
-        DEBUG_SERIAL.print("  count/index: ");
-        DEBUG_SERIAL.print(msg_acks.getCount());
-        DEBUG_SERIAL.print("/");
-        DEBUG_SERIAL.println(msg_acks.getIndex());
+        DebugComm::print(&msg_acks, "", 1);
         #endif
       }
     }
@@ -1166,8 +1120,7 @@ void RobotComm::cycle(uint32_t time_us){
       #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
       DEBUG_SERIAL.print("  operation: ");
       DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
-      DEBUG_SERIAL.print("  count: ");
-      DEBUG_SERIAL.println(msg_error.getCount());
+      DebugComm::print(&msg_error, "", 1);
       #endif
     }
   }
@@ -1186,3 +1139,291 @@ void RobotComm::cycle(uint32_t time_us){
 void RobotComm::cycle(){
   cycle(micros());
 }
+
+
+// ==================================================
+// DebugComm
+// ==================================================
+
+#if defined(DEBUG_COMMUNICATION)
+
+String DebugComm::indent(uint8_t level, uint8_t size) {
+  String str = "";
+  for(int i = 0; i < (int) (level * size); i++) str += " ";
+  return str;
+}
+
+
+void DebugComm::print(Communication::Header      *header, String title, uint8_t indent_level, uint8_t indent_size){
+  if(header == NULL) return;
+  String indent_0 = indent(indent_level + 0, indent_size);
+  String indent_1 = indent(indent_level + 1, indent_size);
+
+  DEBUG_SERIAL.print(indent_0);
+  if(title.length() == 0) {
+    DEBUG_SERIAL.println("Header:");
+  } else {
+    DEBUG_SERIAL.println(title);
+  }
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("code: ");
+  DEBUG_SERIAL.println((uint8_t) header->getCode());
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("num: ");
+  DEBUG_SERIAL.println(header->getNum());
+}
+
+void DebugComm::print(Communication::Message    *message, String title, uint8_t indent_level, uint8_t indent_size){
+  if(message == NULL) return;
+  String indent_0 = indent(indent_level + 0, indent_size);
+  String indent_1 = indent(indent_level + 1, indent_size);
+
+  DEBUG_SERIAL.print(indent_0);
+  if(title.length() == 0) {
+    DEBUG_SERIAL.println("Message:");
+  } else {
+    DEBUG_SERIAL.println(title);
+  }
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("code: ");
+  DEBUG_SERIAL.println((uint8_t) message->getCode());
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("num: ");
+  DEBUG_SERIAL.println(message->getNum());
+}
+
+void DebugComm::print(Communication::MsgIDLE   *msg_idle, String title, uint8_t indent_level, uint8_t indent_size){
+  if(msg_idle == NULL) return;
+  String indent_0 = indent(indent_level + 0, indent_size);
+  String indent_1 = indent(indent_level + 1, indent_size);
+
+  DEBUG_SERIAL.print(indent_0);
+  if(title.length() == 0) {
+    DEBUG_SERIAL.println("Message IDLE:");
+  } else {
+    DEBUG_SERIAL.println(title);
+  }
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("count: ");
+  DEBUG_SERIAL.println(msg_idle->getCount());
+}
+
+void DebugComm::print(Communication::MsgPWM     *msg_pwm, String title, uint8_t indent_level, uint8_t indent_size){
+  if(msg_pwm == NULL) return;
+  String indent_0 = indent(indent_level + 0, indent_size);
+  String indent_1 = indent(indent_level + 1, indent_size);
+
+  DEBUG_SERIAL.print(indent_0);
+  if(title.length() == 0) {
+    DEBUG_SERIAL.println("Message PWM:");
+  } else {
+    DEBUG_SERIAL.println(title);
+  }
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("count: ");
+  DEBUG_SERIAL.println(msg_pwm->getCount());
+
+  for(uint8_t i = 0; i < msg_pwm->getCount(); i++){
+    DEBUG_SERIAL.print(indent_1);
+    DEBUG_SERIAL.print("pwm ");
+    DEBUG_SERIAL.print(i);
+    DEBUG_SERIAL.print(": ");
+    DEBUG_SERIAL.println(msg_pwm->getPwm(i));
+  }
+}
+
+void DebugComm::print(Communication::MsgREF     *msg_ref, String title, uint8_t indent_level, uint8_t indent_size){
+  if(msg_ref == NULL) return;
+  String indent_0 = indent(indent_level + 0, indent_size);
+  String indent_1 = indent(indent_level + 1, indent_size);
+
+  DEBUG_SERIAL.print(indent_0);
+  if(title.length() == 0) {
+    DEBUG_SERIAL.println("Message REF:");
+  } else {
+    DEBUG_SERIAL.println(title);
+  }
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("count: ");
+  DEBUG_SERIAL.println(msg_ref->getCount());
+
+  for(uint8_t i = 0; i < msg_ref->getCount(); i++){
+    DEBUG_SERIAL.print(indent_1);
+    DEBUG_SERIAL.print("denc ");
+    DEBUG_SERIAL.print(i);
+    DEBUG_SERIAL.print(": ");
+    DEBUG_SERIAL.println(msg_ref->getDeltaEnc(i));
+  }
+}
+
+void DebugComm::print(Communication::MsgROBOT *msg_robot, String title, uint8_t indent_level, uint8_t indent_size){
+  if(msg_robot == NULL) return;
+  String indent_0 = indent(indent_level + 0, indent_size);
+  String indent_1 = indent(indent_level + 1, indent_size);
+
+  DEBUG_SERIAL.print(indent_0);
+  if(title.length() == 0) {
+    DEBUG_SERIAL.println("Message ROBOT:");
+  } else {
+    DEBUG_SERIAL.println(title);
+  }
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("count: ");
+  DEBUG_SERIAL.println(msg_robot->getCount());
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("timesampling: ");
+  DEBUG_SERIAL.println(msg_robot->getTimeSampling());
+}
+
+void DebugComm::print(Communication::MsgMOTOR *msg_motor, String title, uint8_t indent_level, uint8_t indent_size){
+  if(msg_motor == NULL) return;
+  String indent_0 = indent(indent_level + 0, indent_size);
+  String indent_1 = indent(indent_level + 1, indent_size);
+
+  DEBUG_SERIAL.print(indent_0);
+  if(title.length() == 0) {
+    DEBUG_SERIAL.println("Message MOTOR:");
+  } else {
+    DEBUG_SERIAL.println(title);
+  }
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("index: ");
+  DEBUG_SERIAL.println(msg_motor->getIndex());
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("encoder: ");
+  DEBUG_SERIAL.print(msg_motor->getChangeEncoder() ? "1 " : "0 ");
+  DEBUG_SERIAL.println(msg_motor->getEncoderValue());
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("spin dir: ");
+  DEBUG_SERIAL.println(msg_motor->getSpinDirection());
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("enc dir: ");
+  DEBUG_SERIAL.println(msg_motor->getEncDirection());
+}
+
+void DebugComm::print(Communication::MsgPID     *msg_pid, String title, uint8_t indent_level, uint8_t indent_size){
+  if(msg_pid == NULL) return;
+  String indent_0 = indent(indent_level + 0, indent_size);
+  String indent_1 = indent(indent_level + 1, indent_size);
+
+  DEBUG_SERIAL.print(indent_0);
+  if(title.length() == 0) {
+    DEBUG_SERIAL.println("Message PID:");
+  } else {
+    DEBUG_SERIAL.println(title);
+  }
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("index: ");
+  DEBUG_SERIAL.println(msg_pid->getIndex());
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("div: ");
+  DEBUG_SERIAL.println(msg_pid->getPidDiv(), 3);
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("kp: ");
+  DEBUG_SERIAL.println(msg_pid->getPidKp(), 3);
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("ki: ");
+  DEBUG_SERIAL.println(msg_pid->getPidKi(), 3);
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("kd: ");
+  DEBUG_SERIAL.println(msg_pid->getPidKd(), 3);
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("sat: ");
+  DEBUG_SERIAL.println(msg_pid->getPidSat(), 3);
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("pole: ");
+  DEBUG_SERIAL.println(msg_pid->getPidPole(), 3);
+}
+
+void DebugComm::print(Communication::MsgACKC   *msg_ackc, String title, uint8_t indent_level, uint8_t indent_size){
+  if(msg_ackc == NULL) return;
+  String indent_0 = indent(indent_level + 0, indent_size);
+  String indent_1 = indent(indent_level + 1, indent_size);
+
+  DEBUG_SERIAL.print(indent_0);
+  if(title.length() == 0) {
+    DEBUG_SERIAL.println("Message ACKC:");
+  } else {
+    DEBUG_SERIAL.println(title);
+  }
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("count: ");
+  DEBUG_SERIAL.println(msg_ackc->getCount());
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("endstops:");
+  for(uint8_t i = 0; i < msg_ackc->getCount(); i++){
+    DEBUG_SERIAL.print(msg_ackc->getEndStop(i) ? " 1" : " 0");
+  }
+  DEBUG_SERIAL.println();
+
+  for(uint8_t i = 0; i < msg_ackc->getCount(); i++){
+    DEBUG_SERIAL.print(indent_1);
+    DEBUG_SERIAL.print("denc ");
+    DEBUG_SERIAL.print(i);
+    DEBUG_SERIAL.print(": ");
+    DEBUG_SERIAL.println(msg_ackc->getDeltaEnc(i));
+  }
+}
+
+void DebugComm::print(Communication::MsgACKS   *msg_acks, String title, uint8_t indent_level, uint8_t indent_size){
+  if(msg_acks == NULL) return;
+  String indent_0 = indent(indent_level + 0, indent_size);
+  String indent_1 = indent(indent_level + 1, indent_size);
+
+  DEBUG_SERIAL.print(indent_0);
+  if(title.length() == 0) {
+    DEBUG_SERIAL.println("Message ACKS:");
+  } else {
+    DEBUG_SERIAL.println(title);
+  }
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("count/index: ");
+  DEBUG_SERIAL.print(msg_acks->getCount());
+  DEBUG_SERIAL.print("/");
+  DEBUG_SERIAL.println(msg_acks->getIndex());
+}
+
+void DebugComm::print(Communication::MsgERROR *msg_error, String title, uint8_t indent_level, uint8_t indent_size){
+  if(msg_error == NULL) return;
+  String indent_0 = indent(indent_level + 0, indent_size);
+  String indent_1 = indent(indent_level + 1, indent_size);
+
+  DEBUG_SERIAL.print(indent_0);
+  if(title.length() == 0) {
+    DEBUG_SERIAL.println("Message ERROR:");
+  } else {
+    DEBUG_SERIAL.println(title);
+  }
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("count/index: ");
+  DEBUG_SERIAL.print(msg_error->getCount());
+  DEBUG_SERIAL.print("/");
+  DEBUG_SERIAL.println(msg_error->getIndex());
+}
+
+
+#endif

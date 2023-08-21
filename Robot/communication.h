@@ -22,7 +22,7 @@
 
 #if defined(MEGA)
 #define DEBUG_COMMUNICATION     // Enable serial communication debugging
-#define DEBUG_CHANNEL 1         // Choice serial channel for debugging
+#define DEBUG_CHANNEL 0         // Choice serial channel for debugging
 #define DEBUG_LOW_LEVEL         // Debug low level data exchange
 #define DEBUG_HIGH_LEVEL        // Debug high level data exchange
 
@@ -349,5 +349,28 @@ private:
   long *encoders_rcv;     // Cumulative encoders values received
   long *encoders_snd;     // Cumulative encoders values sent
 };
+
+
+#if defined(DEBUG_COMMUNICATION)
+class DebugComm {
+  static String indent(uint8_t level, uint8_t size);
+
+public:
+  DebugComm() = delete;
+  ~DebugComm() = delete;
+
+  static void print(Communication::Header      *header, String title, uint8_t indent_level = 0, uint8_t indent_size = 2);
+  static void print(Communication::Message    *message, String title, uint8_t indent_level = 0, uint8_t indent_size = 2);
+  static void print(Communication::MsgIDLE   *msg_idle, String title, uint8_t indent_level = 0, uint8_t indent_size = 2);
+  static void print(Communication::MsgPWM     *msg_pwm, String title, uint8_t indent_level = 0, uint8_t indent_size = 2);
+  static void print(Communication::MsgREF     *msg_ref, String title, uint8_t indent_level = 0, uint8_t indent_size = 2);
+  static void print(Communication::MsgROBOT *msg_robot, String title, uint8_t indent_level = 0, uint8_t indent_size = 2);
+  static void print(Communication::MsgMOTOR *msg_motor, String title, uint8_t indent_level = 0, uint8_t indent_size = 2);
+  static void print(Communication::MsgPID     *msg_pid, String title, uint8_t indent_level = 0, uint8_t indent_size = 2);
+  static void print(Communication::MsgACKC   *msg_ackc, String title, uint8_t indent_level = 0, uint8_t indent_size = 2);
+  static void print(Communication::MsgACKS   *msg_acks, String title, uint8_t indent_level = 0, uint8_t indent_size = 2);
+  static void print(Communication::MsgERROR *msg_error, String title, uint8_t indent_level = 0, uint8_t indent_size = 2);
+};
+#endif
 
 #endif  // COMMUNICATION_H
