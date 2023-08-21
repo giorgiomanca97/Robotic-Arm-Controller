@@ -7,15 +7,15 @@
 
 HardwareSerial* Communication::hwserial = &Serial;
 
-
 void Communication::channel(uint8_t index){
   hwserial = SerialComm::port(index);
 }
 
-
-void Communication::flush(){
-  while(hwserial->available()) {
-    hwserial->read();
+void Communication::flush(bool input){
+  if(input) {
+    while(hwserial->available()) {
+      hwserial->read();
+    }
   }
   hwserial->flush();
 }

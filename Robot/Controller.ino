@@ -72,49 +72,49 @@
 // ============================================================
 
 // Control
-#define TS_US       10000   // Control time sampling (microseconds)
+#define TS_US       100000  // Control time sampling (microseconds)
 
-#define PID_1_DIV   1000.0  // Motor 1 PID encoder error divider
-#define PID_1_KP    1.0     // Motor 1 PID proportional coefficient
-#define PID_1_KI    0.1     // Motor 1 PID integral coefficient
+#define PID_1_DIV   1.0     // Motor 1 PID encoder error divider
+#define PID_1_KP    0.0     // Motor 1 PID proportional coefficient
+#define PID_1_KI    0.0     // Motor 1 PID integral coefficient
 #define PID_1_KD    0.0     // Motor 1 PID derivative coefficient
-#define PID_1_SAT   100.0   // Motor 1 PID integral saturation
-#define PID_1_POLE  10.0    // Motor 1 PID dirty derivative pole
+#define PID_1_SAT   0.0     // Motor 1 PID integral saturation
+#define PID_1_POLE  0.0     // Motor 1 PID dirty derivative pole
 
-#define PID_2_DIV   1000.0  // Motor 2 PID encoder error divider
-#define PID_2_KP    1.0     // Motor 2 PID proportional coefficient
-#define PID_2_KI    0.1     // Motor 2 PID integral coefficient
+#define PID_2_DIV   1.0     // Motor 2 PID encoder error divider
+#define PID_2_KP    0.0     // Motor 2 PID proportional coefficient
+#define PID_2_KI    0.0     // Motor 2 PID integral coefficient
 #define PID_2_KD    0.0     // Motor 2 PID derivative coefficient
-#define PID_2_SAT   100.0   // Motor 2 PID integral saturation
-#define PID_2_POLE  10.0    // Motor 2 PID dirty derivative pole
+#define PID_2_SAT   0.0     // Motor 2 PID integral saturation
+#define PID_2_POLE  0.0     // Motor 2 PID dirty derivative pole
 
-#define PID_3_DIV   1000.0  // Motor 3 PID encoder error divider
-#define PID_3_KP    1.0     // Motor 3 PID proportional coefficient
-#define PID_3_KI    0.1     // Motor 3 PID integral coefficient
+#define PID_3_DIV   1.0     // Motor 3 PID encoder error divider
+#define PID_3_KP    0.0     // Motor 3 PID proportional coefficient
+#define PID_3_KI    0.0     // Motor 3 PID integral coefficient
 #define PID_3_KD    0.0     // Motor 3 PID derivative coefficient
-#define PID_3_SAT   100.0   // Motor 3 PID integral saturation
-#define PID_3_POLE  10.0    // Motor 3 PID dirty derivative pole
+#define PID_3_SAT   0.0     // Motor 3 PID integral saturation
+#define PID_3_POLE  0.0     // Motor 3 PID dirty derivative pole
 
-#define PID_4_DIV   1000.0  // Motor 4 PID encoder error divider
-#define PID_4_KP    1.0     // Motor 4 PID proportional coefficient
-#define PID_4_KI    0.1     // Motor 4 PID integral coefficient
+#define PID_4_DIV   1.0     // Motor 4 PID encoder error divider
+#define PID_4_KP    0.0     // Motor 4 PID proportional coefficient
+#define PID_4_KI    0.0     // Motor 4 PID integral coefficient
 #define PID_4_KD    0.0     // Motor 4 PID derivative coefficient
-#define PID_4_SAT   100.0   // Motor 4 PID integral saturation
-#define PID_4_POLE  10.0    // Motor 4 PID dirty derivative pole
+#define PID_4_SAT   0.0     // Motor 4 PID integral saturation
+#define PID_4_POLE  0.0     // Motor 4 PID dirty derivative pole
 
-#define PID_5_DIV   1000.0  // Motor 5 PID encoder error divider
-#define PID_5_KP    1.0     // Motor 5 PID proportional coefficient
-#define PID_5_KI    0.1     // Motor 5 PID integral coefficient
+#define PID_5_DIV   1.0     // Motor 5 PID encoder error divider
+#define PID_5_KP    0.0     // Motor 5 PID proportional coefficient
+#define PID_5_KI    0.0     // Motor 5 PID integral coefficient
 #define PID_5_KD    0.0     // Motor 5 PID derivative coefficient
-#define PID_5_SAT   100.0   // Motor 5 PID integral saturation
-#define PID_5_POLE  10.0    // Motor 5 PID dirty derivative pole
+#define PID_5_SAT   0.0     // Motor 5 PID integral saturation
+#define PID_5_POLE  0.0     // Motor 5 PID dirty derivative pole
 
-#define PID_6_DIV   1000.0  // Motor 6 PID encoder error divider
-#define PID_6_KP    1.0     // Motor 6 PID proportional coefficient
-#define PID_6_KI    0.1     // Motor 6 PID integral coefficient
+#define PID_6_DIV   1.0     // Motor 6 PID encoder error divider
+#define PID_6_KP    0.0     // Motor 6 PID proportional coefficient
+#define PID_6_KI    0.0     // Motor 6 PID integral coefficient
 #define PID_6_KD    0.0     // Motor 6 PID derivative coefficient
-#define PID_6_SAT   100.0   // Motor 6 PID integral saturation
-#define PID_6_POLE  10.0    // Motor 6 PID dirty derivative pole
+#define PID_6_SAT   0.0     // Motor 6 PID integral saturation
+#define PID_6_POLE  0.0     // Motor 6 PID dirty derivative pole
 
 // Serial Communication
 #define CHANNEL     0       // Serial channel

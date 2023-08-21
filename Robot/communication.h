@@ -21,7 +21,7 @@
 
 
 #if defined(MEGA)
-#define DEBUG_COMMUNICATION     // Enable serial communication debugging
+//#define DEBUG_COMMUNICATION     // Enable serial communication debugging
 #define DEBUG_CHANNEL 1         // Choice serial channel for debugging
 #define DEBUG_LOW_LEVEL         // Debug low level data exchange
 #define DEBUG_HIGH_LEVEL        // Debug high level data exchange
@@ -48,7 +48,7 @@ public:
   ~Communication() = delete;
   
   static void channel(uint8_t index);
-  static void flush();
+  static void flush(bool input = true);
   
   // Codes
   enum class Code : uint8_t{
