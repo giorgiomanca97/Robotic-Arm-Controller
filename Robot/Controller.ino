@@ -117,7 +117,7 @@
 #define PID_6_POLE  10.0    // Motor 6 PID dirty derivative pole
 
 // Serial Communication
-#define CHANNEL     1       // Serial channel
+#define CHANNEL     0       // Serial channel
 #define BAUDRATE    115200  // Serial baudrate
 
 // Debug

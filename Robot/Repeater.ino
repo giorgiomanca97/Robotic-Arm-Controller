@@ -60,10 +60,13 @@ void setup() {
 // ============================================================
 
 void loop() {
-  if(serial_in->available() > 0) {
+  if(serial_in->available() > 0 || serial_out->available()) {
     toggle.set(true);
     while(serial_in->available() > 0) {
       serial_out->write((uint8_t) serial_in->read());
+    }
+    while(serial_in->available() > 0) {
+      serial_out->read();
     }
   }
   toggle.set(false);
