@@ -25,16 +25,43 @@ encoders = zeros(N, length(T));
 
 %% Initialization
 clear robot
-robot = Robot(N, ts_us, port, baudrate);
+robot = Robot(N, 100000, port, baudrate);
+
+
+%% Robot Setup
+res = robot.ctrl_idle();
+
+while(~res)
+    pause(1);
+    res = robot.setup_robot(ts_us);
+    if(~res)
+        warning("Waiting for robot to be ready.");
+        robot.reset();
+    end
+end
+
+for k = 1:N
+    res = robot.setup_motor(k, 0, 0, 0);
+    if(~res)
+        error("Error for motor " + string(k) + " setup");
+    end
+end
+
+for k = 1:N
+    robot.setup_pid(k, 1, 0, 0, 0, 0, 0);
+    if(~res)
+        error("Error for pid " + string(k) + " setup");
+    end
+end
 
 
 %% Test 1
-time = tic();
+last = tic();
 for k = 1:length(T)
-    delta = toc(time) * 1e6;
-    time = tic();
-    % res = robot.ctrl_pwm(pwms(:, k));
-    res = robot.ctrl_idle();
+    curr = tic();
+    res = robot.ctrl_pwm(pwms(:, k));
+    delta = toc(last) * 1e6;
+    last = curr;
     switches(1:N, k) = robot.getEndstops();
     encoders(1:N, k) = robot.getEncoders();
     fprintf("cycle:    %d\n", k);

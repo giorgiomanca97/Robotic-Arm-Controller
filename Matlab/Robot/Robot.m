@@ -2,8 +2,9 @@ classdef Robot < handle
     properties (Access = private)
         Comm Communication;         % Serial communication
         N (1,1) uint8;              % Robot size
-        Ends (:,1) logical;         % Robot endstops value
-        Encs (:,1) int32;           % Robot encoders value
+        Endstop (:,1) logical;         % Robot endstops value
+        EncsRob (:,1) int32;        % Robot encoders value
+        EncsRef (:,1) int32;        % Robot encoders value
         Timeout (1,1) uint32;       % Target encoders value
     end
     
@@ -31,10 +32,10 @@ classdef Robot < handle
             obj.Comm.flush();
 
             obj.N = uint8(n);
-            obj.Ends = false([obj.N, 1]);
-            obj.Encs = zeros([obj.N, 1], 'int32');
+            obj.Endstop = false([obj.N, 1]);
+            obj.EncsRob = zeros([obj.N, 1], 'int32');
+            obj.EncsRef = zeros([obj.N, 1], 'int32');
             obj.Timeout = uint32(ts_us);
-            
         end
     end
     
@@ -54,7 +55,7 @@ classdef Robot < handle
                 obj (1,1) Robot;
             end
 
-            endstops = obj.Ends(1:obj.N, 1);
+            endstops = obj.Endstop(1:obj.N, 1);
         end
 
         function encoders = getEncoders(obj)
@@ -62,7 +63,7 @@ classdef Robot < handle
                 obj (1,1) Robot;
             end
 
-            encoders = obj.Encs(1:obj.N, 1);
+            encoders = obj.EncsRob(1:obj.N, 1);
         end
     end
     
@@ -82,8 +83,8 @@ classdef Robot < handle
 
             if(res && msg.getCode() == Code.ACKC && msg.getCount() == obj.N)
                 for k = 1:obj.N
-                    obj.Encs(k) = obj.Encs(k) + int32(msg.getDeltaEnc(k));
-                    obj.Ends(k) = msg.getEndStop(k);
+                    obj.EncsRob(k) = obj.EncsRob(k) + int32(msg.getDeltaEnc(k));
+                    obj.Endstop(k) = msg.getEndStop(k);
                 end
             else
                 res = false;
@@ -112,8 +113,8 @@ classdef Robot < handle
 
             if(res && msg.getCode() == Code.ACKC && msg.getCount() == obj.N)
                 for k = 1:obj.N
-                    obj.Encs(k) = obj.Encs(k) + int32(msg.getDeltaEnc(k));
-                    obj.Ends(k) = msg.getEndStop(k);
+                    obj.EncsRob(k) = obj.EncsRob(k) + int32(msg.getDeltaEnc(k));
+                    obj.Endstop(k) = msg.getEndStop(k);
                 end
             else
                 res = false;
@@ -130,11 +131,14 @@ classdef Robot < handle
             if(length(encs) ~= obj.N)
                 error("Wrong encs length.");
             end
+            
+            delta_ref = zeros([obj.N, 1], 'int16');
 
             msg = MsgREF();
             msg.setCount(obj.N);
             for k = 1:obj.N
-                msg.setDeltaEnc(k, int32(encs(k)) - obj.Encs(k));
+                msg.setDeltaEnc(k, int32(encs(k)) - obj.EncsRef(k));
+                delta_ref(k) = msg.getDeltaEnc(k);
             end
 
             obj.Comm.snd(msg);
@@ -142,8 +146,9 @@ classdef Robot < handle
             
             if(res && msg.getCode() == Code.ACKC && msg.getCount() == obj.N)
                 for k = 1:obj.N
-                    obj.Encs(k) = obj.Encs(k) + int32(msg.getDeltaEnc(k));
-                    obj.Ends(k) = msg.getEndStop(k);
+                    obj.Endstop(k) = msg.getEndStop(k);
+                    obj.EncsRob(k) = obj.EncsRob(k) + int32(msg.getDeltaEnc(k));
+                    obj.EncsRef(k) = obj.EncsRef(k) + int32(delta_ref(k));
                 end
             else
                 res = false;
@@ -163,7 +168,7 @@ classdef Robot < handle
             ts_us = msg.getTimeSampling();
 
             obj.Comm.snd(msg);
-            [res, msg] = obj.Comm.rcv(2*obj.Timeout);
+            [res, msg] = obj.Comm.rcv(5*obj.Timeout);
             
             if(res && msg.getCode() == Code.ACKS && msg.getCount() == obj.N)
                 obj.Timeout(1) = ts_us;
@@ -197,10 +202,11 @@ classdef Robot < handle
             enc = msg.getEncoderValue();
 
             obj.Comm.snd(msg);
-            [res, msg] = obj.Comm.rcv(2*obj.Timeout);
+            [res, msg] = obj.Comm.rcv(5*obj.Timeout);
             
             if(res && msg.getCode() == Code.ACKS && msg.getIndex() == (index-1))
-                obj.Encs(index) = int32(enc);
+                obj.EncsRob(index) = int32(enc);
+                obj.EncsRef(index) = int32(enc);
             else
                 res = false;
                 obj.Comm.flush();
@@ -233,11 +239,47 @@ classdef Robot < handle
             msg.setPidPole(pole);
 
             obj.Comm.snd(msg);
-            [res, msg] = obj.Comm.rcv(2*obj.Timeout);
+            [res, msg] = obj.Comm.rcv(5*obj.Timeout);
             
             if(res && msg.getCode() == Code.ACKS && msg.getIndex() == (index-1))
             else
                 res = false;
+                obj.Comm.flush();
+            end
+        end
+    end
+
+
+    % Reset
+    methods (Access = public)
+        function res = reset(obj)
+            arguments
+                obj (1,1) Robot;
+            end
+
+            obj.Comm.flush();
+            
+            res = obj.setup_robot(obj.Timeout);
+            
+            for k = 1:obj.N
+                if(~res)
+                    break;
+                end
+                res = obj.setup_motor(k, 0, 0, 0);
+                if(res)
+                    obj.EncsRob(k) = int32(0);
+                    obj.EncsRef(k) = int32(0);
+                end
+            end
+
+            for k = 1:obj.N
+                if(~res)
+                    break;
+                end
+                res = obj.setup_pid(k, 1, 0, 0, 0, 0, 0);
+            end
+
+            if(~res)
                 obj.Comm.flush();
             end
         end
