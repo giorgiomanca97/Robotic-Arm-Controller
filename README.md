@@ -32,18 +32,12 @@ There are four types of messages:
 
 ## **Header**
 
-The **header** is 1 byte length for both sides of the communication. Let number the bits from the LSb one to the MSb one (87654321). The header byte has the following format:
+The **header** is 1 byte length for both sides of the communication. Let number the bits from the LSb to the MSb (87654321). The header byte has the following format:
 
 | Bits n. | Name | Description                                                                      |
 | ------- | ---- | -------------------------------------------------------------------------------- |
 |   8-4   | CODE | 5 bits code specifing message type and payload.                                  |
 |   3-1   |  NUM | 3 bits unsigned number specifing motor count/index (in respect to code).         |
-
-<br>
-
-The possible **ACK** values are:
-- 0: for command messages, sent by the master (Companion PC).
-- 1: for response messages, sent by the slave (Microcontroller).
 
 <br>
 
