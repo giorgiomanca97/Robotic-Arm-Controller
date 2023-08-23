@@ -26,7 +26,7 @@ bool Communication::peek(Header *hdr, Code target, Timer *timeout_us) {
   #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_LOW)
   uint32_t count = 0;
   #endif
-  while(!found){
+  while(true){
     res = hwserial->peek();
     found = (res == -1) ? false : (((uint8_t) res) >> 3) == (uint8_t) target;
     if(found) break;
@@ -63,7 +63,7 @@ bool Communication::peek(Communication::Header *hdr, Timer *timeout_us){
   #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_LOW)
   uint32_t count = 0;
   #endif
-  while(!found){
+  while(true){
     res = hwserial->peek();
     found = (res == -1) ? false : Communication::convert(((uint8_t) res) >> 3, code);
     if(found) break;
@@ -1480,6 +1480,5 @@ void DebugComm::print(Communication::MsgERROR *msg_error, String title, uint8_t 
   DEBUG_SERIAL.print("/");
   DEBUG_SERIAL.println(msg_error->getIndex());
 }
-
 
 #endif

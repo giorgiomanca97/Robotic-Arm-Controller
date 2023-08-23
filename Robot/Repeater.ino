@@ -17,7 +17,7 @@
 // Pins
 // ============================================================
 
-#define PIN_TOGGLE 13       // Toggle pin used to check timesampling
+#define PIN_TOGGLE 13       // Toggle pin
 
 
 // ============================================================
@@ -60,12 +60,12 @@ void setup() {
 // ============================================================
 
 void loop() {
-  if(serial_in->available() > 0 || serial_out->available()) {
+  if(serial_in->available() > 0 || serial_out->available() > 0) {
     toggle.set(true);
     while(serial_in->available() > 0) {
       serial_out->write((uint8_t) serial_in->read());
     }
-    while(serial_in->available() > 0) {
+    while(serial_out->available() > 0) {
       serial_out->read();
     }
   }
