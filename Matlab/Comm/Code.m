@@ -1,14 +1,14 @@
 classdef Code < uint8
     enumeration
-        IDLE (0)
-        PWM  (1)
-        REF  (2)
-        ROBOT(16)
-        MOTOR(17)
-        PID  (18)
-        ACKC (24)
-        ACKS (25)
-        ERROR(31)
+        IDLE  ( 1)
+        PWM   ( 2)
+        REF   ( 3)
+        ROBOT (16)
+        MOTOR (17)
+        PID   (18)
+        ACKC  (24)
+        ACKS  (25)
+        ERROR (31)
     end
 
     methods
@@ -48,7 +48,7 @@ classdef Code < uint8
     methods (Static)
         function [code, res] = convert(value)
             arguments
-                value (1,1) {mustBeInteger}
+                value (1,1) {mustBeInteger};
             end
 
             switch(uint8(value))

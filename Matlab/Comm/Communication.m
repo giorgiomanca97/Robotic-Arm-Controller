@@ -1,50 +1,17 @@
 classdef Communication < handle
     properties (Access = private)
         Serial (1,1);
-        PeekByte (1,1) uint8;
-        Peeked (1,1) logical;
     end
 
 
     methods
         function obj = Communication(varargin)
             obj.Serial = serialport(varargin{:});
-            obj.PeekByte = uint8(0);
-            obj.Peeked = false;
         end
     end
 
 
     methods
-        function [res, hdr] = peek(obj, timeout_us)
-            arguments
-                obj (1,1) Communication;
-                timeout_us (1,1) {mustBeInteger, mustBeNonnegative} = 0;
-            end
-            
-            time = tic();
-
-            if(~obj.Peeked)
-                if(timeout_us > 0)
-                    while(obj.Serial.NumBytesAvailable < 1 && toc(time) * 1e6 <= timeout_us)
-                    end
-                end
-                if(obj.Serial.NumBytesAvailable > 0)
-                    obj.PeekByte = obj.Serial.read(1, 'uint8');
-                    obj.Peeked = true;
-                end
-            end
-            
-            hdr = Header();
-            if(obj.Peeked) 
-                hdr.parse(obj.PeekByte);
-                res = true;
-            else
-                res = false;
-            end            
-        end
-        
-        
         function [res, msg] = rcv(obj, timeout_us)
             arguments
                 obj (1,1) Communication;
@@ -53,18 +20,22 @@ classdef Communication < handle
             
             time = tic();
             
-            if(obj.Peeked)
-                hdr = Header();
-                hdr.parse(obj.PeekByte); 
-            else
-                [res, hdr] = obj.peek(timeout_us);
-                if(~res)
-                    msg = MsgERROR(hdr.getNum());
+            while(true)
+                if(obj.Serial.NumBytesAvailable > 0)
+                    byte = obj.Serial.read(1, 'uint8');
+                    [code, res] = Code.convert(bitshift(byte, -3, 'uint8'));
+                    if(res)
+                        break;
+                    end
+                end
+                if(timeout_us == 0 || toc(time) * 1e6 > timeout_us)
+                    res = false;
+                    msg = MsgERROR(0);
                     return;
                 end
             end
             
-            switch(hdr.getCode())
+            switch(code)
                 case Code.IDLE
                     msg = MsgIDLE();
                 case Code.PWM
@@ -84,24 +55,23 @@ classdef Communication < handle
                 case Code.ERROR
                     msg = MsgERROR();
             end
+            msg.setNum(bitand(byte, 0b00000111, 'uint8'));
 
-            msg.setNum(hdr.getNum());
-
-            if(timeout_us > 0)
-                while((obj.Serial.NumBytesAvailable + 1) < msg.bsize() && toc(time) * 1e6 <= timeout_us)
+            while(true)
+                if((obj.Serial.NumBytesAvailable + 1) >= msg.bsize())
+                    if (msg.bsize() > 1)
+                        body = obj.Serial.read(msg.bsize()-1, 'uint8');
+                    else
+                        body = zeros([1,0], 'uint8');
+                    end
+                    res = msg.parse([byte, body]);
+                    return;
                 end
-            end
-
-            if((obj.Serial.NumBytesAvailable + 1) >= msg.bsize())
-                if (msg.bsize() > 1)
-                    body = obj.Serial.read(msg.bsize()-1, 'uint8');
-                else
-                    body = zeros([1,0], 'uint8');
+                if(timeout_us == 0 || toc(time) * 1e6 > timeout_us)
+                    res = false;
+                    msg = MsgERROR(0);
+                    return;
                 end
-                res = msg.parse([obj.PeekByte, body]);
-                obj.Peeked = false;
-            else
-                res = false;
             end
         end
         
@@ -123,7 +93,6 @@ classdef Communication < handle
                 obj (1,1) Communication;
             end
             
-            obj.Peeked = false;
             obj.Serial.flush();
         end
     end
