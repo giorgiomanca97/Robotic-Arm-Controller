@@ -32,6 +32,7 @@
 #define BAUDRATE    115200  // Serial baudrate
 #define TIMEOUT_US  10000   // Communication Timeout
 #define ERROR_MS    1000    // Communication Error wait
+#define DELAY_US    2500    // Communication fake delay
 
 // Debug
 #if defined(DEBUG_COMMUNICATION)
@@ -49,6 +50,7 @@ PinControl toggle_error = PinControl(TOGGLE_ERROR);
 
 Timer timer;
 Timer timeout;
+Timer fakedelay;
 
 Communication::Header hdr;
 Communication::MsgIDLE msg_idle;
@@ -80,7 +82,8 @@ void setup() {
   #endif
 
   timer.setup((uint32_t) 5 * 1000*ERROR_MS);
-  timeout.setup((uint32_t) 2*TIMEOUT_US);
+  timeout.setup((uint32_t) 2 * TIMEOUT_US);
+  fakedelay.setup((uint32_t)DELAY_US);
 
   msg_idle.setCount(COUNT);
   msg_pwm.setCount(COUNT);
@@ -117,6 +120,10 @@ void loop() {
     state_ctrl = !state_ctrl;
     toggle_ctrl.set(state_ctrl);
     res = ctrl_loop(time_us);
+    if(res && DELAY_US > 0) {
+      fakedelay.reset(micros());
+      while(!fakedelay.check(micros()));
+    }
   }
 
   if(!res) {

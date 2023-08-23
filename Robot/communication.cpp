@@ -874,8 +874,6 @@ void RobotComm::setPinCtrl(PinControl *pin) {
 }
 
 void RobotComm::cycle(uint32_t time_us){
-  if(this->pin_comm != NULL) this->pin_comm->set(true);
-
   robot.update();
 
   Communication::channel(channel);
@@ -884,6 +882,8 @@ void RobotComm::cycle(uint32_t time_us){
   bool res = Communication::peek(&header);
   
   if(res){
+    if(this->pin_comm != NULL) this->pin_comm->set(true);
+
     timeout.reset(time_us);
     Communication::Code code = header.getCode();
     
@@ -1179,6 +1179,8 @@ void RobotComm::cycle(uint32_t time_us){
       #endif
       #endif
     }
+
+    if(this->pin_comm != NULL) this->pin_comm->set(false);
   }
 
   else if(robot.getStatus() != Robot::Status::Idle && timer.check(time_us)) {
@@ -1188,8 +1190,6 @@ void RobotComm::cycle(uint32_t time_us){
     DEBUG_SERIAL.println("Control timeout -> Robot IDLE");
     #endif
   }
-
-  if(this->pin_comm != NULL) this->pin_comm->set(false);
 }
 
 void RobotComm::cycle(){

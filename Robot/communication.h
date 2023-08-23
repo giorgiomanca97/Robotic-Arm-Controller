@@ -21,7 +21,7 @@
 
 
 #if defined(MEGA)
-//#define DEBUG_COMMUNICATION   // Enable serial communication debugging
+///#define DEBUG_COMMUNICATION   // Enable serial communication debugging
 #define DEBUG_CHANNEL 1       // Choice serial channel for debugging
 #define DEBUG_LOW             // Debug low level data exchange
 #define DEBUG_HIGH            // Debug high level data exchange
