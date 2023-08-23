@@ -45,9 +45,9 @@ The possible **CODE** values are:
 
 | Code | Binary |  Name |  Type | Description                                                       |
 | ---- | ------ | ----- | ----- | ----------------------------------------------------------------- |
-|    0 |  00000 |  IDLE |  ctrl | set all motors speed to zero.                                     |
-|    1 |  00001 |   PWM |  ctrl | directly assign PWMs values.                                      |
-|    2 |  00010 |   REF |  ctrl | assign desired encoders values.                                   |
+|    1 |  00001 |  IDLE |  ctrl | set all motors speed to zero.                                     |
+|    2 |  00010 |   PWM |  ctrl | directly assign PWMs values.                                      |
+|    3 |  00011 |   REF |  ctrl | assign desired encoders values.                                   |
 |   16 |  10000 | ROBOT | setup | set robot general parameters (time-sampling).                     |
 |   17 |  10001 | MOTOR | setup | set spin/encoder direction and encoder value for motor in header. |
 |   18 |  10010 |   PID | setup | sending parameters for PID controller in header.                  |
@@ -69,7 +69,7 @@ Payload of 0 bytes -> message of 1 byte.
 
 | Byte n. | Description                                                                             |
 | ------- | --------------------------------------------------------------------------------------- |
-| 1 (hdr) | CODE: 00000 (**IDLE**).<br>NUM: number of motors minus one (N-1).                       |
+| 1 (hdr) | CODE: 00001 (**IDLE**).<br>NUM: number of motors minus one (N-1).                       |
 
 <br>
 
@@ -79,7 +79,7 @@ Payload of N+1 bytes -> message of N+2 bytes.
 
 | Byte n. | Description                                                                             |
 | ------- | --------------------------------------------------------------------------------------- |
-| 1 (hdr) | CODE: 00001 (**PWM**).<br>NUM: number of motors minus one (N-1).                        |
+| 1 (hdr) | CODE: 00010 (**PWM**).<br>NUM: number of motors minus one (N-1).                        |
 |    2    | Bit-mask for values' sign [87654321].<br> Bit value: 0 = positive, 1 = negative.        |
 |    3    | Unsigned pwm value in [0, 255] for motor 1.                                             |
 |   ...   | ...                                                                                     |
@@ -93,7 +93,7 @@ Payload of N+1 bytes -> message of N+2 bytes.
 
 | Byte n. | Description                                                                             |
 | ------- | --------------------------------------------------------------------------------------- |
-| 1 (hdr) | CODE: 00010 (**REF**).<br>NUM: number of motors minus one (N-1).                        |
+| 1 (hdr) | CODE: 00011 (**REF**).<br>NUM: number of motors minus one (N-1).                        |
 |    2    | Bit-mask for values' sign [87654321].<br> Bit value: 0 = positive, 1 = negative.        |
 |    3    | Unsigned delta-encoder value in [0, 255] for motor 1.                                   |
 |   ...   | ...                                                                                     |
