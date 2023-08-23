@@ -79,7 +79,7 @@ classdef Robot < handle
             msg.setCount(obj.N);
 
             obj.Comm.snd(msg);
-            [res, msg] = obj.Comm.rcv(obj.Timeout);
+            [res, msg] = obj.Comm.rcv(2*obj.Timeout);
 
             if(res && msg.getCode() == Code.ACKC && msg.getCount() == obj.N)
                 for k = 1:obj.N
@@ -109,7 +109,7 @@ classdef Robot < handle
             end
 
             obj.Comm.snd(msg);
-            [res, msg] = obj.Comm.rcv(obj.Timeout);
+            [res, msg] = obj.Comm.rcv(2*obj.Timeout);
 
             if(res && msg.getCode() == Code.ACKC && msg.getCount() == obj.N)
                 for k = 1:obj.N
@@ -142,7 +142,7 @@ classdef Robot < handle
             end
 
             obj.Comm.snd(msg);
-            [res, msg] = obj.Comm.rcv(obj.Timeout);
+            [res, msg] = obj.Comm.rcv(2*obj.Timeout);
             
             if(res && msg.getCode() == Code.ACKC && msg.getCount() == obj.N)
                 for k = 1:obj.N
@@ -168,10 +168,10 @@ classdef Robot < handle
             ts_us = msg.getTimeSampling();
 
             obj.Comm.snd(msg);
-            [res, msg] = obj.Comm.rcv(5*obj.Timeout);
+            [res, msg] = obj.Comm.rcv(2*obj.Timeout);
             
             if(res && msg.getCode() == Code.ACKS && msg.getCount() == obj.N)
-                obj.Timeout(1) = ts_us;
+                obj.Timeout = uint32(ts_us);
             else
                 res = false;
                 obj.Comm.flush();
@@ -202,7 +202,7 @@ classdef Robot < handle
             enc = msg.getEncoderValue();
 
             obj.Comm.snd(msg);
-            [res, msg] = obj.Comm.rcv(5*obj.Timeout);
+            [res, msg] = obj.Comm.rcv(2*obj.Timeout);
             
             if(res && msg.getCode() == Code.ACKS && msg.getIndex() == (index-1))
                 obj.EncsRob(index) = int32(enc);
@@ -239,7 +239,7 @@ classdef Robot < handle
             msg.setPidPole(pole);
 
             obj.Comm.snd(msg);
-            [res, msg] = obj.Comm.rcv(5*obj.Timeout);
+            [res, msg] = obj.Comm.rcv(2*obj.Timeout);
             
             if(res && msg.getCode() == Code.ACKS && msg.getIndex() == (index-1))
             else

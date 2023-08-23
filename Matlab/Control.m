@@ -9,7 +9,7 @@ disp(ports);
 
 %% Parameters
 N = 6;
-ts_us = 250000;
+ts_us = 25000;
 dt = 1e-6 * ts_us;
 port = ports(1);
 baudrate = 115200;
@@ -57,34 +57,33 @@ end
 %% Test 1
 last = tic();
 for k = 1:length(T)
-    curr = tic();
     res = robot.ctrl_pwm(pwms(:, k));
     delta = toc(last) * 1e6;
-    last = curr;
+    last = tic();
     status(1, k) = res;
     deltas(1, k) = delta;
     ends(1:N, k) = robot.getEndstops();
     encs(1:N, k) = robot.getEncoders();
-    fprintf("cycle:    %d\n", k);
-    fprintf("res:      %s\n", string(res));
-    fprintf("delta:    %0.1f us\n", delta);
-    fprintf("switches:");
-    for m = 1:N
-        fprintf(" %d", ends(m,k));
-    end
-    fprintf("\n");
-    fprintf("encoders:");
-    for m = 1:N
-        fprintf(" %d", encs(m,k));
-    end
-    fprintf("\n");
+    % fprintf("cycle:    %d\n", k);
+    % fprintf("res:      %s\n", string(res));
+    % fprintf("delta:    %0.1f us\n", delta);
+    % fprintf("switches:");
+    % for m = 1:N
+    %     fprintf(" %d", ends(m,k));
+    % end
+    % fprintf("\n");
+    % fprintf("encoders:");
+    % for m = 1:N
+    %     fprintf(" %d", encs(m,k));
+    % end
+    % fprintf("\n");
 end
 
 robot.ctrl_idle();
 
 
 %%
-tiledlayout(3,1);
+tiledlayout(5,1);
 
 ax1 = nexttile;
 plot(T', pwms');
@@ -93,16 +92,28 @@ title("PWMs");
 legend("pwm " + string(1:N));
 
 ax2 = nexttile;
+plot(T', status');
+grid on;
+title("Status");
+legend("comm ok ");
+
+ax3 = nexttile;
+plot(T', deltas');
+grid on;
+title("Deltas");
+legend("delta time ");
+
+ax4 = nexttile;
 plot(T', ends');
 grid on;
 title("Switches");
 legend("switch " + string(1:N));
 
-ax3 = nexttile;
+ax5 = nexttile;
 plot(T', encs');
 grid on;
 title("Encoders");
 legend("encoders " + string(1:N));
 
-linkaxes([ax1, ax2, ax3], 'x');
+linkaxes([ax1, ax2, ax3, ax4, ax5], 'x');
 

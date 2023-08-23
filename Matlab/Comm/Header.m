@@ -1,6 +1,6 @@
 classdef Header < handle
     properties (Access = private)
-        Cod (1,1) Code;
+        Cod (1,1) Code = Code.IDLE;
         Num (1,1) uint8;
     end
 
