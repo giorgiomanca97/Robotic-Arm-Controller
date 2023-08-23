@@ -63,8 +63,8 @@
 #define MOTOR_6_END   32    // Motor 6 endstop switch
 
 // Other pins
-#define TOGGLE_COMM   52    // Toggle pin used to check timesampling
-#define TOGGLE_CTRL   53    // Toggle pin used to check timesampling
+#define TOGGLE_COMM   52    // Toggle pin used to communication timing
+#define TOGGLE_CTRL   53    // Toggle pin used to control timesampling
 
 
 // ============================================================
@@ -117,7 +117,7 @@
 #define PID_6_POLE  0.0     // Motor 6 PID dirty derivative pole
 
 // Serial Communication
-#define CHANNEL     0       // Serial channel
+#define CHANNEL     1       // Serial channel
 #define BAUDRATE    115200  // Serial baudrate
 
 // Debug
@@ -227,6 +227,9 @@ void setup()
 
   robotcomm.setPinComm(&toggle_comm);
   robotcomm.setPinCtrl(&toggle_ctrl);
+
+  Communication::channel(CHANNEL);
+  Communication::flush();
 }
 
 

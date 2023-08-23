@@ -20,23 +20,75 @@ void Communication::flush(bool input){
   hwserial->flush();
 }
 
-bool Communication::peek(Communication::Header *hdr, Timer *timeout_us){
-  if(hdr == NULL) return false;
+bool Communication::peek(Header *hdr, Code target, Timer *timeout_us) {
   int res = -1;
-  if(timeout_us == NULL) {
+  bool found = false;
+  #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_LOW)
+  uint32_t count = 0;
+  #endif
+  while(!found){
     res = hwserial->peek();
-  } else {
-    while(res == -1){
-      if(timeout_us->check(micros())) break;
-      res = hwserial->peek();
-    } 
+    found = (res == -1) ? false : (((uint8_t) res) >> 3) == (uint8_t) target;
+    if(found) break;
+    if(res != -1) hwserial->read();
+    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_LOW)
+    count++;
+    #endif
+    if(timeout_us == NULL || timeout_us->check(micros())) break;
+  } 
+  if(!found) return false;
+  if(hdr != NULL) {
+    hdr->setCode(target);
+    hdr->setNum((uint8_t) res & 0b00000111);
   }
-  if(res == -1) return false;
-  hdr->parse(res);
-  #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_LOW_LEVEL)
+  #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_LOW)
   DEBUG_SERIAL.print("peek: ");
-  DEBUG_SERIAL.print((uint8_t) hdr->getCode());
-  DEBUG_SERIAL.println();
+  DEBUG_SERIAL.print(count);
+  DEBUG_SERIAL.print(" | ");
+  char hhex, lhex;
+  byteToHex((uint8_t) res, hhex, lhex);
+  DEBUG_SERIAL.print(hhex);
+  DEBUG_SERIAL.print(lhex);
+  DEBUG_SERIAL.print(" (");
+  DEBUG_SERIAL.print((uint8_t) target);
+  DEBUG_SERIAL.println(")");
+  #endif
+  return true;
+}
+
+bool Communication::peek(Communication::Header *hdr, Timer *timeout_us){
+  int res = -1;
+  Code code;
+  bool found = false;
+  #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_LOW)
+  uint32_t count = 0;
+  #endif
+  while(!found){
+    res = hwserial->peek();
+    found = (res == -1) ? false : Communication::convert(((uint8_t) res) >> 3, code);
+    if(found) break;
+    if(res != -1) hwserial->read();
+    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_LOW)
+    count++;
+    #endif
+    if(timeout_us == NULL || timeout_us->check(micros())) break;
+  } 
+  if(!found) return false;
+  if(hdr != NULL) {
+    hdr->setCode(code);
+    hdr->setNum((uint8_t) res & 0b00000111);
+  }
+  #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_LOW)
+  DEBUG_SERIAL.print("peek: ");
+  DEBUG_SERIAL.print(count);
+  DEBUG_SERIAL.print(" | ");
+  char hhex, lhex;
+  byteToHex((uint8_t) res, hhex, lhex);
+  DEBUG_SERIAL.print(hhex);
+  DEBUG_SERIAL.print(lhex);
+  DEBUG_SERIAL.print(" (");
+  DEBUG_SERIAL.print((uint8_t) code);
+  DEBUG_SERIAL.println(")");
   #endif
   return true;
 }
@@ -45,12 +97,12 @@ bool Communication::rcv(Communication::Message *msg, Timer *timeout_us){
   if(msg == NULL) return false;
   uint8_t buffer[msg->size()];
   while(hwserial->available() < msg->size()) if(timeout_us != NULL && timeout_us->check(micros())) return false;
-  #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_LOW_LEVEL)
+  #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_LOW)
   int available = hwserial->available();
   #endif
   if(hwserial->readBytes(buffer, msg->size()) != msg->size()) return false;
   bool valid = msg->from(buffer);
-  #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_LOW_LEVEL)
+  #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_LOW)
   DEBUG_SERIAL.print("rcv: ");
   DEBUG_SERIAL.print((uint8_t) msg->getCode());
   DEBUG_SERIAL.print(" ");
@@ -74,11 +126,11 @@ bool Communication::snd(Communication::Message *msg){
   if(msg == NULL) return false;
   uint8_t buffer[msg->size()];
   msg->fill(buffer);
-  #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_LOW_LEVEL)
+  #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_LOW)
   int available = hwserial->availableForWrite();
   #endif
   bool valid = hwserial->write(buffer, msg->size()) == msg->size();
-  #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_LOW_LEVEL)
+  #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_LOW)
   DEBUG_SERIAL.print("snd: ");
   DEBUG_SERIAL.print((uint8_t) msg->getCode());
   DEBUG_SERIAL.print(" ");
@@ -128,7 +180,6 @@ bool Communication::convert(uint8_t value, Communication::Code &code){
       code = Code::ERROR;
       return true;
     default:
-      code = Code::ERROR;
       return false;
   }
 }
@@ -836,7 +887,8 @@ void RobotComm::cycle(uint32_t time_us){
     timeout.reset(time_us);
     Communication::Code code = header.getCode();
     
-    if(Communication::isCtrl(code)) {
+    if(Communication::isCtrl(code)) 
+    {
       if(robot.getStatus() == Robot::Status::Idle){
         timer.reset(time_us);
       }
@@ -844,27 +896,27 @@ void RobotComm::cycle(uint32_t time_us){
       if(robot.getStatus() == Robot::Status::Idle || timer.check(time_us)) {
         if(this->pin_ctrl != NULL) this->pin_ctrl->set(true);
 
-        #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+        #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
         DEBUG_SERIAL.print("Receiving Control ");
         #endif
         
         switch(code){
           case Communication::Code::IDLE:
             {
-              #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+              #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
               DEBUG_SERIAL.println("IDLE");
               #endif
               Communication::MsgIDLE msg_idle;
               msg_idle.setCount(robot.getSize());
               res = Communication::rcv(&msg_idle, &timeout);
               res = res && msg_idle.getCount() == robot.getSize();
-              #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+              #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
               DEBUG_SERIAL.print("  operation: ");
               DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
               #endif
               if(!res) break;
               robot.setStatus(Robot::Status::Idle);
-              #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+              #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH) && defined(DEBUG_DATA)
               DebugComm::print(&msg_idle, "", 1);
               #endif
               break;
@@ -872,14 +924,14 @@ void RobotComm::cycle(uint32_t time_us){
 
           case Communication::Code::PWM:
             {
-              #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+              #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
               DEBUG_SERIAL.println("PWM");
               #endif
               Communication::MsgPWM msg_pwm;
               msg_pwm.setCount(robot.getSize());
               res = Communication::rcv(&msg_pwm, &timeout);
               res = res && msg_pwm.getCount() == robot.getSize();
-              #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+              #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
               DEBUG_SERIAL.print("  operation: ");
               DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
               #endif
@@ -888,7 +940,7 @@ void RobotComm::cycle(uint32_t time_us){
               for(uint8_t i = 0; i < robot.getSize(); i++) {
                 robot.setPwm(i, msg_pwm.getPwm(i));
               }
-              #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+              #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH) && defined(DEBUG_DATA)
               DebugComm::print(&msg_pwm, "", 1);
               #endif
               break;
@@ -896,14 +948,14 @@ void RobotComm::cycle(uint32_t time_us){
 
           case Communication::Code::REF:
             {
-              #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+              #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
               DEBUG_SERIAL.println("REF");
               #endif
               Communication::MsgREF msg_ref;
               msg_ref.setCount(robot.getSize());
               res = Communication::rcv(&msg_ref, &timeout);
               res = res && msg_ref.getCount() == robot.getSize();
-              #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+              #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
               DEBUG_SERIAL.print("  operation: ");
               DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
               #endif
@@ -913,14 +965,14 @@ void RobotComm::cycle(uint32_t time_us){
                 encoders_rcv[i] += msg_ref.getDeltaEnc(i);
                 robot.setTarget(i, encoders_rcv[i]);
               }
-              #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+              #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH) && defined(DEBUG_DATA)
               DebugComm::print(&msg_ref, "", 1);
               #endif
               break;
             }
 
           default:
-            #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+            #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
             DEBUG_SERIAL.println("Unexpected");
             #endif
             res = false;
@@ -938,16 +990,18 @@ void RobotComm::cycle(uint32_t time_us){
             msg_ackc.setDeltaEnc(i, robot.getEncoder(i) - encoders_snd[i]);
           }
 
-          #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+          #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
           DEBUG_SERIAL.println("Sending Control ACKC");
           #endif
 
           res = Communication::snd(&msg_ackc);
 
-          #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+          #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
           DEBUG_SERIAL.print("  operation: ");
           DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
+          #if defined(DEBUG_DATA)
           DebugComm::print(&msg_ackc, "", 1);
+          #endif
           #endif
 
           if(res) {
@@ -956,25 +1010,21 @@ void RobotComm::cycle(uint32_t time_us){
             }
           }
 
-          #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+          #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH) && defined(DEBUG_DATA)
           DEBUG_SERIAL.print("Encoder rob:");
           for(uint8_t i = 0; i < robot.getSize(); i++){
             DEBUG_SERIAL.print(" ");
             DEBUG_SERIAL.print(robot.getEncoder(i));
           }
           DEBUG_SERIAL.println();
-          #endif
 
-          #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
           DEBUG_SERIAL.print("Encoder rcv:");
           for(uint8_t i = 0; i < robot.getSize(); i++){
             DEBUG_SERIAL.print(" ");
             DEBUG_SERIAL.print(encoders_rcv[i]);
           }
           DEBUG_SERIAL.println();
-          #endif
 
-          #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
           DEBUG_SERIAL.print("Encoder snd:");
           for(uint8_t i = 0; i < robot.getSize(); i++){
             DEBUG_SERIAL.print(" ");
@@ -988,24 +1038,25 @@ void RobotComm::cycle(uint32_t time_us){
       }
     } 
     
-    else if(Communication::isSetup(code)) {
+    else if(Communication::isSetup(code)) 
+    {
       robot.setStatus(Robot::Status::Idle, true);
       Communication::MsgACKS msg_acks;
 
-      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
       DEBUG_SERIAL.print("Receiving Setup ");
       #endif
 
       switch(code){
         case Communication::Code::ROBOT:
           {
-            #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+            #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
             DEBUG_SERIAL.println("ROBOT");
             #endif
             Communication::MsgROBOT msg_robot;
             res = Communication::rcv(&msg_robot, &timeout);
             res = res && msg_robot.getCount() == robot.getSize();
-            #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+            #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
             DEBUG_SERIAL.print("  operation: ");
             DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
             #endif
@@ -1013,7 +1064,7 @@ void RobotComm::cycle(uint32_t time_us){
             robot.setTimeSampling(msg_robot.getTimeSampling());
             timer.setup(msg_robot.getTimeSampling());
             timeout.setup(msg_robot.getTimeSampling());
-            #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+            #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH) && defined(DEBUG_DATA)
             DebugComm::print(&msg_robot, "", 1);
             #endif
             msg_acks.setCount(robot.getSize());
@@ -1022,13 +1073,13 @@ void RobotComm::cycle(uint32_t time_us){
 
         case Communication::Code::MOTOR:
           {
-            #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+            #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
             DEBUG_SERIAL.println("MOTOR");
             #endif
             Communication::MsgMOTOR msg_motor;
             res = Communication::rcv(&msg_motor, &timeout);
             res = res && msg_motor.getIndex() < robot.getSize();
-            #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+            #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
             DEBUG_SERIAL.print("  operation: ");
             DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
             #endif
@@ -1044,7 +1095,7 @@ void RobotComm::cycle(uint32_t time_us){
             if(msg_motor.getChangeEncDir()) {
               robot.invertEncoder(msg_motor.getIndex(), msg_motor.getInvertEncDir());
             }
-            #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+            #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH) && defined(DEBUG_DATA)
             DebugComm::print(&msg_motor, "", 1);
             #endif
             msg_acks.setIndex(msg_motor.getIndex());
@@ -1053,13 +1104,13 @@ void RobotComm::cycle(uint32_t time_us){
 
         case Communication::Code::PID:
           {
-            #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+            #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
             DEBUG_SERIAL.println("PID");
             #endif
             Communication::MsgPID msg_pid;
             res = Communication::rcv(&msg_pid, &timeout);
             res = res && msg_pid.getIndex() < robot.getSize();
-            #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+            #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
             DEBUG_SERIAL.print("  operation: ");
             DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
             #endif
@@ -1067,7 +1118,7 @@ void RobotComm::cycle(uint32_t time_us){
             robot.initPID(msg_pid.getIndex(), msg_pid.getPidSat(),  msg_pid.getPidPole());
             robot.setupPID(msg_pid.getIndex(), msg_pid.getPidDiv(), msg_pid.getPidKp(), msg_pid.getPidKi(), msg_pid.getPidKd());
             robot.resetPID(msg_pid.getIndex());
-            #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+            #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH) && defined(DEBUG_DATA)
             DebugComm::print(&msg_pid, "", 1);
             #endif
             msg_acks.setIndex(msg_pid.getIndex());
@@ -1075,7 +1126,7 @@ void RobotComm::cycle(uint32_t time_us){
           }
 
         default:
-          #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+          #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
           DEBUG_SERIAL.println("Unexpected");
           #endif
           res = false;
@@ -1083,24 +1134,27 @@ void RobotComm::cycle(uint32_t time_us){
       }
       
       if(res){
-        #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+        #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
         DEBUG_SERIAL.println("Sending Setup ACKS");
         #endif
 
         res = Communication::snd(&msg_acks);
 
-        #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+        #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
         DEBUG_SERIAL.print("  operation: ");
         DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
+        #if defined(DEBUG_DATA)
         DebugComm::print(&msg_acks, "", 1);
+        #endif
         #endif
       }
     }
 
-    else {
+    else 
+    {
       res = false;
 
-      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
       DEBUG_SERIAL.println("Peeking Unexpected message");
       #endif
     }
@@ -1111,16 +1165,18 @@ void RobotComm::cycle(uint32_t time_us){
       Communication::MsgERROR msg_error;
       msg_error.setCount(robot.getSize());
 
-      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
       DEBUG_SERIAL.println("Sending Error ERROR");
       #endif
 
       res = Communication::snd(&msg_error);
 
-      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
       DEBUG_SERIAL.print("  operation: ");
       DEBUG_SERIAL.println(res ? "Succeded" : "Failed");
+      #if defined(DEBUG_DATA)
       DebugComm::print(&msg_error, "", 1);
+      #endif
       #endif
     }
   }
@@ -1128,7 +1184,7 @@ void RobotComm::cycle(uint32_t time_us){
   else if(robot.getStatus() != Robot::Status::Idle && timer.check(time_us)) {
     robot.setStatus(Robot::Status::Idle, true);
 
-    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
     DEBUG_SERIAL.println("Control timeout -> Robot IDLE");
     #endif
   }

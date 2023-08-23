@@ -17,7 +17,9 @@
 // Pins
 // ============================================================
 
-#define PIN_TOGGLE 52       // Toggle pin used to check timesampling
+#define TOGGLE_COMM 52      // Toggle pin used to check timesampling
+#define TOGGLE_CTRL 53      // Toggle pin used to control timesampling
+#define TOGGLE_ERROR 51     // Toggle pin used for communication error
 
 
 // ============================================================
@@ -28,8 +30,8 @@
 #define COUNT       6       // Motor count
 #define CHANNEL     1       // Serial channel
 #define BAUDRATE    115200  // Serial baudrate
-#define TIMEOUT_US  250000  // Communication Timeout
-#define ERROR_MS    1000    // Communication Timeout
+#define TIMEOUT_US  10000   // Communication Timeout
+#define ERROR_MS    1000    // Communication Error wait
 
 // Debug
 #if defined(DEBUG_COMMUNICATION)
@@ -41,7 +43,10 @@
 // Components & Variables
 // ============================================================
 
-PinControl toggle = PinControl(PIN_TOGGLE);
+PinControl toggle_comm = PinControl(TOGGLE_COMM);
+PinControl toggle_ctrl = PinControl(TOGGLE_CTRL);
+PinControl toggle_error = PinControl(TOGGLE_ERROR);
+
 Timer timer;
 Timer timeout;
 
@@ -57,6 +62,8 @@ Communication::MsgACKS msg_acks;
 Communication::MsgERROR msg_error;
 
 uint8_t choice = 0;
+bool state_comm = false;
+bool state_ctrl = false;
 
 
 // ============================================================
@@ -64,18 +71,17 @@ uint8_t choice = 0;
 // ============================================================
 
 void setup() {
-  toggle.set(true);
+  toggle_error.set(true);
 
-  SerialComm::start(CHANNEL, DEBUG_BAUDRATE);
+  SerialComm::start(CHANNEL, BAUDRATE);
 
   #if defined(DEBUG_COMMUNICATION)
   SerialComm::start(DEBUG_CHANNEL, DEBUG_BAUDRATE);
   #endif
 
-  timer.setup(20*TIMEOUT_US);
-  timeout.setup(2*TIMEOUT_US);
+  timer.setup((uint32_t) 5 * 1000*ERROR_MS);
+  timeout.setup((uint32_t) 2*TIMEOUT_US);
 
-  Communication::channel(CHANNEL);
   msg_idle.setCount(COUNT);
   msg_pwm.setCount(COUNT);
   msg_ref.setCount(COUNT);
@@ -83,9 +89,12 @@ void setup() {
   msg_ackc.setCount(COUNT);
   msg_error.setCount(COUNT);
 
+  Communication::channel(CHANNEL);
+  Communication::flush();
+
   delay(5*ERROR_MS);
 
-  toggle.set(false);
+  toggle_error.set(false);
 }
 
 
@@ -97,23 +106,27 @@ void loop() {
   uint32_t time_us = micros();
   bool res = true;
 
-  if(timer.check(time_us)) 
-  {
+  state_comm = !state_comm;
+  toggle_comm.set(state_comm);
+
+  if(timer.check(time_us)) {
     res = setup_loop();
     delay(ERROR_MS);
     timer.reset(micros());
-  } else { 
-    toggle.set(true);
+  } else {
+    state_ctrl = !state_ctrl;
+    toggle_ctrl.set(state_ctrl);
     res = ctrl_loop(time_us);
-    toggle.set(false);
   }
 
   if(!res) {
     Communication::flush();
-    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
     DEBUG_SERIAL.println("Communication Error");
     #endif
+    toggle_error.set(true);
     delay(ERROR_MS);
+    toggle_error.set(false);
   }
 }
 
@@ -127,21 +140,21 @@ bool transmit(Communication::Message *sndMsg, Communication::Message *rcvMsg, Ti
   Communication::Header hdr;
 
   if (!Communication::snd(sndMsg)) {
-    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
     DEBUG_SERIAL.println("Send Error");
     #endif
     return false;
   }
 
-  if (!Communication::peek(&hdr, timeout)) {
-    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+  if (!Communication::peek(&hdr, rcvMsg->getCode(), timeout)) {
+    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
     DEBUG_SERIAL.println("Peek Error");
     #endif
     return false;
   }
 
   if (hdr.getCode() != rcvMsg->getCode()) {
-    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
     DEBUG_SERIAL.print("Code Error (");
     DEBUG_SERIAL.print((uint8_t) hdr.getCode());
     DEBUG_SERIAL.print(" ");
@@ -152,7 +165,7 @@ bool transmit(Communication::Message *sndMsg, Communication::Message *rcvMsg, Ti
   }
 
   if (!Communication::rcv(rcvMsg, timeout)) {
-    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
     DEBUG_SERIAL.println("Receive Error");
     #endif
     return false;
@@ -165,23 +178,27 @@ bool transmit(Communication::Message *sndMsg, Communication::Message *rcvMsg, Ti
 bool setup_loop() {
   msg_robot.setTimeSampling(TIMEOUT_US);
 
-  #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+  #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
   DEBUG_SERIAL.println("Transmitting: Setup ROBOT -> Ack ACKS");
   #endif
 
   timeout.reset(micros());
   if(!transmit(&msg_robot, &msg_acks, &timeout)) {
-    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
     DEBUG_SERIAL.println("  operation: Failed");
+    #if defined(DEBUG_DATA)
     DebugComm::print(&msg_robot, "", 1);
+    #endif
     #endif
     return false;
   }
 
-  #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+  #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
   DEBUG_SERIAL.println("  operation: Succeded");
+  #if defined(DEBUG_DATA)
   DebugComm::print(&msg_robot, "", 1);
   DebugComm::print(&msg_acks, "", 1);
+  #endif
   #endif
 
   for(int i = 0; i < COUNT; i++) {
@@ -191,23 +208,27 @@ bool setup_loop() {
     msg_motor.setChangeEncoder(true);
     msg_motor.setEncoderValue((int32_t) i * 10000);
 
-    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
     DEBUG_SERIAL.println("Transmitting: Setup MOTOR -> Ack ACKS");
     #endif
 
     timeout.reset(micros());
     if(!transmit(&msg_motor, &msg_acks, &timeout)) {
-      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
       DEBUG_SERIAL.println("  operation: Failed");
+      #if defined(DEBUG_DATA)
       DebugComm::print(&msg_motor, "", 1);
+      #endif
       #endif
       return false;
     }
 
-    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
     DEBUG_SERIAL.println("  operation: Succeded");
+    #if defined(DEBUG_DATA)
     DebugComm::print(&msg_motor, "", 1);
     DebugComm::print(&msg_acks, "", 1);
+    #endif
     #endif
   }
 
@@ -220,23 +241,27 @@ bool setup_loop() {
     msg_pid.setPidSat(i * 10000.0f);
     msg_pid.setPidPole(i * 1.0f);
 
-    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
     DEBUG_SERIAL.println("Transmitting: Setup PID -> Ack ACKS");
     #endif
 
     timeout.reset(micros());
     if(!transmit(&msg_pid, &msg_acks, &timeout)) {
-      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
       DEBUG_SERIAL.println("  operation: Failed");
+      #if defined(DEBUG_DATA)
       DebugComm::print(&msg_pid, "", 1);
+      #endif
       #endif
       return false;
     }
 
-    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
     DEBUG_SERIAL.println("  operation: Succeded");
+    #if defined(DEBUG_DATA)
     DebugComm::print(&msg_pid, "", 1);
     DebugComm::print(&msg_acks, "", 1);
+    #endif
     #endif
   }
 
@@ -246,26 +271,29 @@ bool setup_loop() {
 
 
 bool ctrl_loop(uint32_t time_us) {
-  timeout.reset(time_us);
-
   switch(choice) {
     case 0:
-      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
       DEBUG_SERIAL.println("Transmitting: Control IDLE -> Ack ACKC");
       #endif
 
+      timeout.reset(time_us);
       if(!transmit(&msg_idle, &msg_ackc, &timeout)) {
-        #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+        #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
         DEBUG_SERIAL.println("  operation: Failed");
+        #if defined(DEBUG_DATA)
         DebugComm::print(&msg_idle, "", 1);
+        #endif
         #endif
         return false;
       }
 
-      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
       DEBUG_SERIAL.println("  operation: Succeded");
+      #if defined(DEBUG_DATA)
       DebugComm::print(&msg_idle, "", 1);
       DebugComm::print(&msg_ackc, "", 1);
+      #endif
       #endif
       return true;
 
@@ -277,22 +305,27 @@ bool ctrl_loop(uint32_t time_us) {
       msg_pwm.setPwm(4, 100);
       msg_pwm.setPwm(5, 150);
 
-      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
       DEBUG_SERIAL.println("Transmitting: Control PWM -> Ack ACKC");
       #endif
 
+      timeout.reset(time_us);
       if(!transmit(&msg_pwm, &msg_ackc, &timeout)) {
-        #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+        #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
         DEBUG_SERIAL.println("  operation: Failed");
+        #if defined(DEBUG_DATA)
         DebugComm::print(&msg_pwm, "", 1);
+        #endif
         #endif
         return false;
       }
 
-      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
       DEBUG_SERIAL.println("  operation: Succeded");
+      #if defined(DEBUG_DATA)
       DebugComm::print(&msg_pwm, "", 1);
       DebugComm::print(&msg_ackc, "", 1);
+      #endif
       #endif
       return true;
 
@@ -304,22 +337,27 @@ bool ctrl_loop(uint32_t time_us) {
       msg_ref.setDeltaEnc(4, -30);
       msg_ref.setDeltaEnc(5, -60);
 
-      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
       DEBUG_SERIAL.println("Transmitting: Control REF -> Ack ACKC");
       #endif
 
+      timeout.reset(time_us);
       if(!transmit(&msg_ref, &msg_ackc, &timeout)) {
-        #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+        #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
         DEBUG_SERIAL.println("  operation: Failed");
+        #if defined(DEBUG_DATA)
         DebugComm::print(&msg_ref, "", 1);
+        #endif
         #endif
         return false;
       }
 
-      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH_LEVEL)
+      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
       DEBUG_SERIAL.println("  operation: Succeded");
+      #if defined(DEBUG_DATA)
       DebugComm::print(&msg_ref, "", 1);
       DebugComm::print(&msg_ackc, "", 1);
+      #endif
       #endif
       return true;
 

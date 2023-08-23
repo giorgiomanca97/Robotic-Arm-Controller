@@ -21,10 +21,11 @@
 
 
 #if defined(MEGA)
-//#define DEBUG_COMMUNICATION     // Enable serial communication debugging
-#define DEBUG_CHANNEL 1         // Choice serial channel for debugging
-#define DEBUG_LOW_LEVEL         // Debug low level data exchange
-#define DEBUG_HIGH_LEVEL        // Debug high level data exchange
+//#define DEBUG_COMMUNICATION   // Enable serial communication debugging
+#define DEBUG_CHANNEL 0       // Choice serial channel for debugging
+#define DEBUG_LOW             // Debug low level data exchange
+#define DEBUG_HIGH            // Debug high level data exchange
+#define DEBUG_DATA            // Debug content of data exchange
 
 #if DEBUG_CHANNEL == 0
 #define DEBUG_SERIAL Serial
@@ -52,9 +53,9 @@ public:
   
   // Codes
   enum class Code : uint8_t{
-    IDLE  = 0b00000,   // 0
-    PWM   = 0b00001,   // 1
-    REF   = 0b00010,   // 2
+    IDLE  = 0b00001,   // 1
+    PWM   = 0b00010,   // 2
+    REF   = 0b00011,   // 3
     ROBOT = 0b10000,   // 16
     MOTOR = 0b10001,   // 17
     PID   = 0b10010,   // 18
@@ -321,6 +322,7 @@ public:
   };
 
 
+  static bool peek(Header *hdr, Code target, Timer *timeout_us = NULL);
   static bool peek(Header *hdr, Timer *timeout_us = NULL);
   static bool rcv(Message *msg, Timer *timeout_us = NULL);
   static bool snd(Message *msg);
