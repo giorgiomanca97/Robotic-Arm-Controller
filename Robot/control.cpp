@@ -1,11 +1,19 @@
 #include "control.h"
 
 
+// ==================================================
 // Integrator
+// ==================================================
 
-void Integrator::init(float ts)
+void Integrator::init(float time_sampling)
 {
-  this->ts = ts;
+  if(time_sampling > 0.0) {
+    this->ts = time_sampling;
+  } else {
+    this->ts = 1.0;
+  }
+
+  reset();
 }
 
 void Integrator::reset()
@@ -45,31 +53,53 @@ float Integrator::evolve(float u)
 }
 
 
+// ==================================================
 // PID
+// ==================================================
 
-void PID::init(float ts, float pole, float sat, bool bumpless)
+void PID::init(float time_sampling, 
+  float err_deadzone, 
+  float int_sat, float int_reset_err_thr, float int_reset_div, float int_reset_val, 
+  float der_filter_pole, 
+  bool bumpless)
 {
-  this->ts = ts;
-  this->pole = pole;
-  this->sat = sat;
+  this->ts = time_sampling;
+  this->err_deadzone = err_deadzone;
+  this->int_sat = int_sat;
+  this->int_rst_thr = int_reset_err_thr;
+  this->int_rst_div = int_reset_div;
+  this->int_rst_val = int_reset_val;
+  this->der_pole = der_filter_pole;
   this->bumpless = bumpless;
 
-  if(pole > 0)
-  {
-    A = exp(-pole*ts);
-    B = (1-A)/pole;
-    C = -pole*pole;
-    D = pole;
-  }
-  else
-  {
-    A = 0;
-    B = 1;
-    C = -1/ts;
-    D = 1/ts;
+  if(ts > 0.0) {
+    if(der_pole > 0.0) {
+      A = exp(-der_pole*ts);
+      B = (1.0-A)/der_pole;
+      C = -der_pole*der_pole;
+      D = der_pole;
+    } else {
+      A = 0.0;
+      B = 1.0;
+      C = -1.0/ts;
+      D = +1.0/ts;
+    }
+  } else {
+    ts = 1.0;
+    if(der_pole > 0.0) {
+      A = exp(-der_pole);
+      B = 1.0-A;
+      C = -B;
+      D = +B;
+    } else {
+      A = 0.0;
+      B = 1.0;
+      C = -B;
+      D = +B;
+    }
   }
 
-  apply_saturation();
+  reset();
 }
 
 void PID::setup(float kp, float ki, float kd)
@@ -102,12 +132,26 @@ void PID::step()
   xi = xi + (bumpless ? ki*ts*e : ts*e);
   xd = A*xd + (bumpless ? kd*B*e : B*e);
 
+  float e = (fabs(this->e) < err_deadzone) ? 0.0 : this->e;
+
+  xi = xi + (bumpless ? ki * ts * e : ts * e);
+  xd = A * xd + (bumpless ? kd * B * e : B * e);
+
+  if(fabs(e) > int_rst_thr && (e * xi) < 0.0) {
+    xi /= int_rst_div;
+    if(fabs(xi) > int_rst_val) {
+      xi = (xi < 0) ? -int_rst_val : int_rst_val;
+    }
+  }
+
   apply_saturation();
 }
 
 float PID::output()
 {
   float u;
+
+  float e = (fabs(this->e) < err_deadzone) ? 0.0 : this->e;
 
   if(bumpless) u = (kp + kd*D) * e + xi + C*xd;
   else u = (kp + kd*D) * e + ki*xi + kd*C*xd;
@@ -128,21 +172,31 @@ float PID::evolve(float e)
 
 void PID::apply_saturation()
 {
-  if(sat > 0)
-  {
-    xi = xi > +sat ? +sat : xi;
-    xi = xi < -sat ? -sat : xi;
+  if(int_sat > 0.0 && fabs(xi) > int_sat) {
+    xi = (xi < 0.0) ? -int_sat : int_sat;
   }
 }
 
 
+// ==================================================
 // Filter
+// ==================================================
 
-void Filter::init(float tau, float ts)
+void Filter::init(float time_sampling, float tau)
 {
-  A = exp(-ts/tau);
-  B = (1-A)*tau;
-  C = 1/tau;
+  float ts = time_sampling;
+  
+  if(ts > 0.0) {
+    A = exp(-time_sampling/tau);
+    B = (1.0-A)*tau;
+    C = 1.0/tau;
+  } else {
+    A = exp(-1.0/tau);
+    B = 1.0-A;
+    C = 1.0;
+  }
+
+  reset();
 }
 
 void Filter::reset()
@@ -180,4 +234,3 @@ float Filter::evolve(float u)
 
   return y;
 }
-

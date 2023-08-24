@@ -1,6 +1,7 @@
 #ifndef CONTROL_H
 #define CONTROL_H
 
+
 #include "math.h"
 
 
@@ -10,7 +11,7 @@ public:
   Integrator() {}
   ~Integrator() {}
 
-  void init(float ts);
+  void init(float time_sampling);
   void reset();
   void reset(float x);
   void input(float u);
@@ -28,7 +29,7 @@ private:
 class Filter final
 {
 public:
-  void init(float tau, float ts);
+  void init(float time_sampling, float tau);
   void reset();
   void reset(float x);
   void input(float u);
@@ -37,8 +38,6 @@ public:
   float evolve(float u);
 
 private:
-  float tau;
-
   float u;
   float x;
 
@@ -51,7 +50,11 @@ private:
 class PID final
 {
 public:
-  void init(float ts, float pole, float sat, bool bumpless);
+  void init(float time_sampling, 
+    float err_deadzone, 
+    float int_sat, float int_reset_err_thr, float int_reset_div, float int_reset_val, 
+    float der_filter_pole, 
+    bool bumpless);
   void setup(float kp, float ki, float kd);
   void reset();
   void reset(float xi, float xd);
@@ -64,8 +67,12 @@ private:
   void apply_saturation();
 
   float ts = 0.0;
-  float pole = 0.0;
-  float sat = 0.0;
+  float err_deadzone;
+  float int_sat;
+  float int_rst_thr;
+  float int_rst_div;
+  float int_rst_val;
+  float der_pole;
   bool bumpless = false;
 
   float kp = 0.0;
