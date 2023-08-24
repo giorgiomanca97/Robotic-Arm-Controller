@@ -191,7 +191,7 @@ Payload of 0 bytes -> message of 1 bytes.
 ## **Little-endian transmission**
 
 Value composed by 2+ bytes are expressed in little-endian notation, which mean from least to most significant byte. 
-For example, flot Float values that means:
+For example, for float values (4 bytes) that means:
 ~~~
 float 32 bits:  D8 D7 D6 D5 D4 D3 D2 D1 | C8 C7 C6 C5 C4 C3 C2 C1 | B8 B7 B6 B5 B4 B3 B2 B1 | A8 A7 A6 A5 A4 A3 A2 A1
 
