@@ -30,9 +30,10 @@
 #define COUNT       6       // Motor count
 #define CHANNEL     1       // Serial channel
 #define BAUDRATE    115200  // Serial baudrate
-#define TIMEOUT_US  10000   // Communication Timeout
-#define ERROR_MS    1000    // Communication Error wait
-#define DELAY_US    2500    // Communication fake delay
+#define TIMEOUT_US  10000   // Communication timeout
+#define ALLOW_TICKS 1       // Allowed missing control ticks
+#define ERROR_MS    1000    // Communication error wait
+#define DELAY_US    15000   // Communication fake delay
 
 // Debug
 #if defined(DEBUG_COMMUNICATION)
@@ -184,6 +185,7 @@ bool transmit(Communication::Message *sndMsg, Communication::Message *rcvMsg, Ti
 
 bool setup_loop() {
   msg_robot.setTimeSampling(TIMEOUT_US);
+  msg_robot.setAllowedTicks(ALLOW_TICKS);
 
   #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
   DEBUG_SERIAL.println("Transmitting: Setup ROBOT -> Ack ACKS");

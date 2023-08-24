@@ -21,7 +21,7 @@
 
 
 #if defined(MEGA)
-///#define DEBUG_COMMUNICATION   // Enable serial communication debugging
+//#define DEBUG_COMMUNICATION   // Enable serial communication debugging
 #define DEBUG_CHANNEL 1       // Choice serial channel for debugging
 #define DEBUG_LOW             // Debug low level data exchange
 #define DEBUG_HIGH            // Debug high level data exchange
@@ -181,9 +181,11 @@ public:
 
     uint8_t getCount();
     uint32_t getTimeSampling();
+    uint8_t getAllowedTicks();
 
     bool setCount(uint8_t count);
     bool setTimeSampling(uint32_t value);
+    bool setAllowedTicks(uint8_t value);
 
   protected:
     uint8_t size_payload();
@@ -192,6 +194,7 @@ public:
 
   private:
     uint32_t timesampling_us;
+    uint8_t allowed_ticks;
   };
 
 
@@ -350,6 +353,8 @@ private:
   Timer timeout;          // Internal timer for serial communication receiving timeouts
   long *encoders_rcv;     // Cumulative encoders values received
   long *encoders_snd;     // Cumulative encoders values sent
+  uint8_t ticks_allowed;  // Allowed ticks in control mode without a new control
+  uint8_t ticks_used;     // Used ticks in control mode without a new control
 };
 
 

@@ -452,6 +452,10 @@ uint32_t Communication::MsgROBOT::getTimeSampling(){
   return timesampling_us;
 }
 
+uint8_t Communication::MsgROBOT::getAllowedTicks(){
+  return allowed_ticks;
+}
+
 bool Communication::MsgROBOT::setCount(uint8_t count){
   return setNum(count - 1);
 }
@@ -461,14 +465,20 @@ bool Communication::MsgROBOT::setTimeSampling(uint32_t value){
   return true;
 }
 
+bool Communication::MsgROBOT::setAllowedTicks(uint8_t value){
+  allowed_ticks = value;
+  return true;
+}
+
 uint8_t Communication::MsgROBOT::size_payload(){
-  return 4;
+  return 5;
 }
 
 uint8_t Communication::MsgROBOT::from_payload(uint8_t *buffer){
   uint32_t ts;
   memcpy((void *) &ts, (void *) (buffer+1), 4);
   setTimeSampling(ts);
+  setAllowedTicks(buffer[5]);
   return size_payload();
 }
 
@@ -476,6 +486,7 @@ uint8_t Communication::MsgROBOT::fill_payload(uint8_t *buffer){
   uint32_t ts;
   ts = getTimeSampling();
   memcpy((void *) (buffer+1), (void *) &ts, 4);
+  buffer[5] = getAllowedTicks();
   return size_payload();
 }
 
@@ -853,6 +864,8 @@ RobotComm::RobotComm(Robot &robot, uint8_t channel) :
   this->timeout.setup(robot.getTimeSampling());
   this->encoders_rcv = (long *) malloc(robot.getSize() * sizeof(long));
   this->encoders_snd = (long *) malloc(robot.getSize() * sizeof(long));
+  this->ticks_allowed = 0;
+  this->ticks_used = 0;
 
   for(int i = 0; i < robot.getSize(); i++) {
     this->encoders_rcv[i] = 0;
@@ -884,6 +897,7 @@ void RobotComm::cycle(uint32_t time_us){
   if(res){
     if(this->pin_comm != NULL) this->pin_comm->set(true);
 
+    ticks_used = 0;
     timeout.reset(time_us);
     Communication::Code code = header.getCode();
     
@@ -1064,6 +1078,7 @@ void RobotComm::cycle(uint32_t time_us){
             robot.setTimeSampling(msg_robot.getTimeSampling());
             timer.setup(msg_robot.getTimeSampling());
             timeout.setup(msg_robot.getTimeSampling());
+            ticks_allowed = msg_robot.getAllowedTicks();
             #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH) && defined(DEBUG_DATA)
             DebugComm::print(&msg_robot, "", 1);
             #endif
@@ -1184,11 +1199,23 @@ void RobotComm::cycle(uint32_t time_us){
   }
 
   else if(robot.getStatus() != Robot::Status::Idle && timer.check(time_us)) {
-    robot.setStatus(Robot::Status::Idle, true);
+    if(ticks_used >= ticks_allowed) {
+      robot.setStatus(Robot::Status::Idle, true);
+      ticks_used = 0;
 
-    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
-    DEBUG_SERIAL.println("Control timeout -> Robot IDLE");
-    #endif
+      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
+      DEBUG_SERIAL.println("Control timeout -> Robot IDLE");
+      #endif
+    } else {
+      robot.compute();
+      robot.actuate();
+      ticks_used++;
+
+      #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
+      DEBUG_SERIAL.print("Missing control: ");
+      DEBUG_SERIAL.println(ticks_used);
+      #endif
+    }
   }
 }
 
@@ -1336,8 +1363,12 @@ void DebugComm::print(Communication::MsgROBOT *msg_robot, String title, uint8_t 
   DEBUG_SERIAL.println(msg_robot->getCount());
 
   DEBUG_SERIAL.print(indent_1);
-  DEBUG_SERIAL.print("timesampling: ");
+  DEBUG_SERIAL.print("ts: ");
   DEBUG_SERIAL.println(msg_robot->getTimeSampling());
+
+  DEBUG_SERIAL.print(indent_1);
+  DEBUG_SERIAL.print("ticks: ");
+  DEBUG_SERIAL.println(msg_robot->getAllowedTicks());
 }
 
 void DebugComm::print(Communication::MsgMOTOR *msg_motor, String title, uint8_t indent_level, uint8_t indent_size){

@@ -9,7 +9,8 @@ disp(ports);
 
 %% Parameters
 N = 6;
-ts_us = 25000;
+ts_us = 20000;
+ticks = 1;
 dt = 1e-6 * ts_us;
 port = ports(1);
 baudrate = 115200;
@@ -34,7 +35,7 @@ fprintf(" Done\n");
 
 
 %% Robot Setup
-res = robot.setup_robot(ts_us);
+res = robot.setup_robot(ts_us, ticks);
 if(~res)
     error("Error for robot setup");
 end

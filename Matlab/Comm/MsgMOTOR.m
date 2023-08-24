@@ -12,8 +12,8 @@ classdef MsgMOTOR < Message
     % Constructor
     methods (Access = public)
         function obj = MsgMOTOR(num)
-            if(nargin < 1)
-                num = 0;
+            arguments
+                num (1,1) {mustBeInteger} = 0;
             end
             
             obj@Message(Code.MOTOR, num);
@@ -190,7 +190,7 @@ classdef MsgMOTOR < Message
 
     % Data Buffer payload
     methods (Access = protected)
-        function dim = bsize_payload(obj)
+        function dim = bsize_payload(obj) %#ok<MANU>
             arguments
                 obj (1,1) MsgMOTOR;
             end

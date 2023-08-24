@@ -7,8 +7,8 @@ classdef MsgACKS < Message
     % Constructor
     methods (Access = public)
         function obj = MsgACKS(num)
-            if(nargin < 1)
-                num = 0;
+            arguments
+                num (1,1) {mustBeInteger} = 0;
             end
             
             obj@Message(Code.ACKS, num);
@@ -60,7 +60,7 @@ classdef MsgACKS < Message
 
     % Data Buffer payload
     methods (Access = protected)
-        function dim = bsize_payload(obj)
+        function dim = bsize_payload(obj) %#ok<MANU>
             arguments
                 obj (1,1) MsgACKS;
             end

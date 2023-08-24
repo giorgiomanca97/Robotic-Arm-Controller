@@ -1,14 +1,15 @@
 classdef MsgROBOT < Message
     properties (Access = private)
         TimeSampling_us (1,1) uint32;
+        AllowedTicks (1,1) uint8;
     end
 
     
     % Constructor
     methods (Access = public)
         function obj = MsgROBOT(num)
-            if(nargin < 1)
-                num = 0;
+            arguments
+                num (1,1) {mustBeInteger} = 0;
             end
             
             obj@Message(Code.ROBOT, num);
@@ -33,6 +34,14 @@ classdef MsgROBOT < Message
 
             ts_us = obj.TimeSampling_us;
         end
+
+        function ticks = getAllowedTicks(obj)
+            arguments
+                obj (1,1) MsgROBOT;
+            end
+
+            ticks = obj.AllowedTicks;
+        end
     end
 
     
@@ -56,17 +65,27 @@ classdef MsgROBOT < Message
             obj.TimeSampling_us = uint32(ts_us);
             res = true;
         end
+
+        function res = setAllowedTicks(obj, ticks)
+            arguments 
+                obj (1,1) MsgROBOT;
+                ticks (1,1) {mustBeInteger}
+            end
+            
+            obj.AllowedTicks = uint8(ticks);
+            res = true;
+        end
     end
     
 
     % Data Buffer payload
     methods (Access = protected)
-        function dim = bsize_payload(obj)
+        function dim = bsize_payload(obj) %#ok<MANU>
             arguments
                 obj (1,1) MsgROBOT;
             end
 
-            dim = 4;
+            dim = 5;
         end
         
         function res = parse_payload(obj, data)
@@ -81,6 +100,7 @@ classdef MsgROBOT < Message
             end
 
             obj.setTimeSampling(Message.bytesToValue(data(1:4), 'uint32'));
+            obj.setAllowedTicks(data(5));
             
             res = true;
         end
@@ -93,6 +113,7 @@ classdef MsgROBOT < Message
             data = zeros([1, obj.bsize_payload()], 'uint8');
 
             data(1:4) = Message.valueToBytes(obj.getTimeSampling(), 'uint32');
+            data(5) = obj.getAllowedTicks();
         end
     end
 end

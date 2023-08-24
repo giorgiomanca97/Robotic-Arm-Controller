@@ -109,6 +109,7 @@ Payload of 4 bytes -> message of 5 bytes.
 | ------- | --------------------------------------------------------------------------------------- |
 | 1 (hdr) | CODE: 10000 (**ROBOT**).<br>NUM: number of motors minus one (N-1).                      |
 |   2-5   | Unsigned timesampling in microseconds resetting value in [0, 2^32 - 1].                 |
+|    6    | Unsigned number of allowed control ticks without receiving a new control.               |
 
 Note: the timesampling value is in little-endian notation.  
 
@@ -143,12 +144,12 @@ Payload of 24 bytes -> message of 25 bytes.
 | Byte n. | Description                                                                             |
 | ------- | --------------------------------------------------------------------------------------- |
 | 1 (hdr) | CODE: 10010 (**PID**).<br>NUM: selected motor index in [0, N-1].                        |
-|   2-5   | Float (little-endian) for PID encoder error divider.                                    |
-|   6-9   | Float (little-endian) for PID proportional coefficient.                                 |
-|  10-13  | Float (little-endian) for PID integral coefficient.                                     |
-|  14-17  | Float (little-endian) for PID derivative coefficient.                                   |
-|  18-21  | Float (little-endian) for PID integral saturation.                                      |
-|  20-25  | Float (little-endian) for PID dirty derivative pole.                                    |
+|   2-5   | Float value for PID encoder error divider.                                    |
+|   6-9   | Float value for PID proportional coefficient.                                 |
+|  10-13  | Float value for PID integral coefficient.                                     |
+|  14-17  | Float value for PID derivative coefficient.                                   |
+|  18-21  | Float value for PID integral saturation.                                      |
+|  20-25  | Float value for PID dirty derivative pole.                                    |
 
 Note: PID values are expressed in continuos time domain (discretization made on-board according to microcontroller time sampling).
 

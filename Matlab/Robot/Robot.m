@@ -2,10 +2,10 @@ classdef Robot < handle
     properties (Access = private)
         Comm Communication;         % Serial communication
         N (1,1) uint8;              % Robot size
-        Endstop (:,1) logical;         % Robot endstops value
+        Endstop (:,1) logical;      % Robot endstops value
         EncsRob (:,1) int32;        % Robot encoders value
-        EncsRef (:,1) int32;        % Robot encoders value
-        Timeout (1,1) uint32;       % Target encoders value
+        EncsRef (:,1) int32;        % Setpoint encoders value
+        Timeout (1,1) uint32;       % Communication timeout
     end
     
     
@@ -156,15 +156,17 @@ classdef Robot < handle
             end
         end
 
-        function res = setup_robot(obj, ts_us)
+        function res = setup_robot(obj, ts_us, ticks)
             arguments
                 obj (1,1) Robot;
                 ts_us (1,1) {mustBeNumeric, mustBeNonnegative};
+                ticks (1,1) {mustBeNumeric, mustBeNonnegative};
             end
 
             msg = MsgROBOT();
             msg.setCount(obj.N);
             msg.setTimeSampling(ts_us);
+            msg.setAllowedTicks(ticks);
             ts_us = msg.getTimeSampling();
 
             obj.Comm.snd(msg);

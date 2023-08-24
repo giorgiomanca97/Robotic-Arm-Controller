@@ -8,11 +8,9 @@ classdef Header < handle
     % Constructor
     methods (Access = public)
         function obj = Header(code, num)
-            if(nargin < 1)
-                code = Code.IDLE;
-            end
-            if(nargin < 2)
-                num = uint8(0);
+            arguments
+                code (1,1) Code = Code.IDLE;
+                num (1,1) {mustBeInteger} = 0;
             end
 
             obj.setCode(code);
@@ -105,7 +103,7 @@ classdef Header < handle
 
     % Data Buffer
     methods (Access = public)
-        function dim = bsize(obj)
+        function dim = bsize(obj) %#ok<MANU>
             arguments
                 obj (1,1) Header;
             end
