@@ -139,7 +139,11 @@ public:
   ~SerialComm() = delete;
 
   static HardwareSerial* port(uint8_t channel);
+
+  static void start(HardwareSerial *hwserial, uint32_t baudrate, uint8_t config = SERIAL_8N1);
   static void start(uint8_t channel, uint32_t baudrate, uint8_t config = SERIAL_8N1);
+
+  static void close(HardwareSerial *hwserial);
   static void close(uint8_t channel);
 };
 #endif
@@ -149,7 +153,7 @@ class PinControl {
 public:
   PinControl(uint8_t pin);
   PinControl(uint8_t pin, float v1, float v2);
-  
+
   uint8_t getPin();
 
   void setLimits(float v1, float v2);

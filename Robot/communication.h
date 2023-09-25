@@ -329,6 +329,8 @@ public:
   static bool peek(Header *hdr, Timer *timeout_us = NULL);
   static bool rcv(Message *msg, Timer *timeout_us = NULL);
   static bool snd(Message *msg);
+
+  static bool transmit(Message *sndMsg, Message *rcvMsg, Timer *timeout = NULL);
 };
 
 

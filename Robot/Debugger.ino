@@ -19,7 +19,7 @@
 
 #define TOGGLE_COMM 52      // Toggle pin used to check timesampling
 #define TOGGLE_CTRL 53      // Toggle pin used to control timesampling
-#define TOGGLE_ERROR 51     // Toggle pin used for communication error
+#define TOGGLE_ERR  51      // Toggle pin used for communication error
 
 
 // ============================================================
@@ -30,7 +30,7 @@
 #define COUNT       6       // Motor count
 #define CHANNEL     1       // Serial channel
 #define BAUDRATE    115200  // Serial baudrate
-#define TIMEOUT_US  10000   // Communication timeout
+#define SAMPLING_US 10000   // Communication timeout
 #define ALLOW_TICKS 1       // Allowed missing control ticks
 #define ERROR_MS    1000    // Communication error wait
 #define DELAY_US    15000   // Communication fake delay
@@ -47,7 +47,7 @@
 
 PinControl toggle_comm = PinControl(TOGGLE_COMM);
 PinControl toggle_ctrl = PinControl(TOGGLE_CTRL);
-PinControl toggle_error = PinControl(TOGGLE_ERROR);
+PinControl toggle_error = PinControl(TOGGLE_ERR);
 
 Timer timer;
 Timer timeout;
@@ -76,15 +76,15 @@ bool state_ctrl = false;
 void setup() {
   toggle_error.set(true);
 
-  SerialComm::start(CHANNEL, BAUDRATE);
+  SerialComm::start((uint8_t) CHANNEL, BAUDRATE);
 
   #if defined(DEBUG_COMMUNICATION)
-  SerialComm::start(DEBUG_CHANNEL, DEBUG_BAUDRATE);
+  SerialComm::start((uint8_t) DEBUG_CHANNEL, DEBUG_BAUDRATE);
   #endif
 
   timer.setup((uint32_t) 5 * 1000*ERROR_MS);
-  timeout.setup((uint32_t) 2 * TIMEOUT_US);
-  fakedelay.setup((uint32_t)DELAY_US);
+  timeout.setup((uint32_t) 2 * SAMPLING_US);
+  fakedelay.setup((uint32_t) DELAY_US);
 
   msg_idle.setCount(COUNT);
   msg_pwm.setCount(COUNT);
@@ -143,48 +143,8 @@ void loop() {
 // Utility
 // ============================================================
 
-bool transmit(Communication::Message *sndMsg, Communication::Message *rcvMsg, Timer *timeout);
-bool transmit(Communication::Message *sndMsg, Communication::Message *rcvMsg, Timer *timeout) {
-  Communication::Header hdr;
-
-  if (!Communication::snd(sndMsg)) {
-    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
-    DEBUG_SERIAL.println("Send Error");
-    #endif
-    return false;
-  }
-
-  if (!Communication::peek(&hdr, rcvMsg->getCode(), timeout)) {
-    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
-    DEBUG_SERIAL.println("Peek Error");
-    #endif
-    return false;
-  }
-
-  if (hdr.getCode() != rcvMsg->getCode()) {
-    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
-    DEBUG_SERIAL.print("Code Error (");
-    DEBUG_SERIAL.print((uint8_t) hdr.getCode());
-    DEBUG_SERIAL.print(" ");
-    DEBUG_SERIAL.print((uint8_t) rcvMsg->getCode());
-    DEBUG_SERIAL.println(")");
-    #endif
-    return false;
-  }
-
-  if (!Communication::rcv(rcvMsg, timeout)) {
-    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
-    DEBUG_SERIAL.println("Receive Error");
-    #endif
-    return false;
-  }
-
-  return true;
-}
-
-
 bool setup_loop() {
-  msg_robot.setTimeSampling(TIMEOUT_US);
+  msg_robot.setTimeSampling(SAMPLING_US);
   msg_robot.setAllowedTicks(ALLOW_TICKS);
 
   #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
@@ -192,7 +152,7 @@ bool setup_loop() {
   #endif
 
   timeout.reset(micros());
-  if(!transmit(&msg_robot, &msg_acks, &timeout)) {
+  if(!Communication::transmit(&msg_robot, &msg_acks, &timeout)) {
     #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
     DEBUG_SERIAL.println("  operation: Failed");
     #if defined(DEBUG_DATA)
@@ -222,7 +182,7 @@ bool setup_loop() {
     #endif
 
     timeout.reset(micros());
-    if(!transmit(&msg_motor, &msg_acks, &timeout)) {
+    if(!Communication::transmit(&msg_motor, &msg_acks, &timeout)) {
       #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
       DEBUG_SERIAL.println("  operation: Failed");
       #if defined(DEBUG_DATA)
@@ -255,7 +215,7 @@ bool setup_loop() {
     #endif
 
     timeout.reset(micros());
-    if(!transmit(&msg_pid, &msg_acks, &timeout)) {
+    if(!Communication::transmit(&msg_pid, &msg_acks, &timeout)) {
       #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
       DEBUG_SERIAL.println("  operation: Failed");
       #if defined(DEBUG_DATA)
@@ -287,7 +247,7 @@ bool ctrl_loop(uint32_t time_us) {
       #endif
 
       timeout.reset(time_us);
-      if(!transmit(&msg_idle, &msg_ackc, &timeout)) {
+      if(!Communication::transmit(&msg_idle, &msg_ackc, &timeout)) {
         #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
         DEBUG_SERIAL.println("  operation: Failed");
         #if defined(DEBUG_DATA)
@@ -319,7 +279,7 @@ bool ctrl_loop(uint32_t time_us) {
       #endif
 
       timeout.reset(time_us);
-      if(!transmit(&msg_pwm, &msg_ackc, &timeout)) {
+      if(!Communication::transmit(&msg_pwm, &msg_ackc, &timeout)) {
         #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
         DEBUG_SERIAL.println("  operation: Failed");
         #if defined(DEBUG_DATA)
@@ -351,7 +311,7 @@ bool ctrl_loop(uint32_t time_us) {
       #endif
 
       timeout.reset(time_us);
-      if(!transmit(&msg_ref, &msg_ackc, &timeout)) {
+      if(!Communication::transmit(&msg_ref, &msg_ackc, &timeout)) {
         #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
         DEBUG_SERIAL.println("  operation: Failed");
         #if defined(DEBUG_DATA)

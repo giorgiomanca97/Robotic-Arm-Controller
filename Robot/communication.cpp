@@ -150,6 +150,44 @@ bool Communication::snd(Communication::Message *msg){
   return valid;
 }
 
+bool Communication::transmit(Communication::Message *sndMsg, Communication::Message *rcvMsg, Timer *timeout) {
+  Communication::Header hdr;
+
+  if (!Communication::snd(sndMsg)) {
+    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
+    DEBUG_SERIAL.println("Send Error");
+    #endif
+    return false;
+  }
+
+  if (!Communication::peek(&hdr, rcvMsg->getCode(), timeout)) {
+    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
+    DEBUG_SERIAL.println("Peek Error");
+    #endif
+    return false;
+  }
+
+  if (hdr.getCode() != rcvMsg->getCode()) {
+    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
+    DEBUG_SERIAL.print("Code Error (");
+    DEBUG_SERIAL.print((uint8_t) hdr.getCode());
+    DEBUG_SERIAL.print(" ");
+    DEBUG_SERIAL.print((uint8_t) rcvMsg->getCode());
+    DEBUG_SERIAL.println(")");
+    #endif
+    return false;
+  }
+
+  if (!Communication::rcv(rcvMsg, timeout)) {
+    #if defined(DEBUG_COMMUNICATION) && defined(DEBUG_HIGH)
+    DEBUG_SERIAL.println("Receive Error");
+    #endif
+    return false;
+  }
+
+  return true;
+}
+
 bool Communication::convert(uint8_t value, Communication::Code &code){
   switch(value){
     case (uint8_t) Code::IDLE:

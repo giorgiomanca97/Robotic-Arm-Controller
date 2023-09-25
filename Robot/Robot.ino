@@ -10,12 +10,15 @@
 #define LEONARDO
 #endif
 
-#define SELECT_SKETCH 1
+#define SELECT_SKETCH 4
 // 1: Controller
 // 2: Debugger
 // 3: Repeater
+// 4: Joystick
 
-#if !defined(MEGA) || SELECT_SKETCH <= 0 || SELECT_SKETCH > 3
+#if !defined(SELECT_SKETCH) || \
+    (SELECT_SKETCH < 1 || SELECT_SKETCH > 4) || \
+    (!defined(MEGA) && SELECT_SKETCH < 4)
 
 #ifdef SELECT_SKETCH
 #undef SELECT_SKETCH

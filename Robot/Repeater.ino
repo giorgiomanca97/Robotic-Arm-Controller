@@ -29,6 +29,7 @@
 #define CHANNEL_OUT        0
 #define BAUDRATE_OUT  115200
 
+
 // ============================================================
 // Components & Variables
 // ============================================================
@@ -48,8 +49,8 @@ void setup() {
   serial_in = SerialComm::port(CHANNEL_IN);
   serial_out = SerialComm::port(CHANNEL_OUT);
 
-  SerialComm::start(CHANNEL_IN, BAUDRATE_IN);
-  SerialComm::start(CHANNEL_OUT, BAUDRATE_OUT);
+  SerialComm::start(serial_in, BAUDRATE_IN);
+  SerialComm::start(serial_out, BAUDRATE_OUT);
 
   toggle.set(false);
 }

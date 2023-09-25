@@ -196,10 +196,10 @@ void setup()
   PWMfreq::set(PWMfreq::MegaTimer3::FREQ_3921_16);
   PWMfreq::set(PWMfreq::MegaTimer4::FREQ_3921_16);
 
-  SerialComm::start(CHANNEL, BAUDRATE);
+  SerialComm::start((uint8_t) CHANNEL, BAUDRATE);
 
   #if defined(DEBUG_COMMUNICATION)
-  SerialComm::start(DEBUG_CHANNEL, DEBUG_BAUDRATE);
+  SerialComm::start((uint8_t) DEBUG_CHANNEL, DEBUG_BAUDRATE);
   #endif
 
   robot.setMotor(0, motor1);

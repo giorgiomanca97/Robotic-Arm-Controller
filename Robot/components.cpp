@@ -66,16 +66,22 @@ HardwareSerial* SerialComm::port(uint8_t channel) {
   }
 }
 
-void SerialComm::start(uint8_t channel, uint32_t baudrate, uint8_t config) {
-  HardwareSerial *hwserial = port(channel);
+void SerialComm::start(HardwareSerial* hwserial, uint32_t baudrate, uint8_t config) {
   hwserial->begin(baudrate, config);
   hwserial->flush();
 }
 
-void SerialComm::close(uint8_t channel) {
-  HardwareSerial *hwserial = port(channel);
+void SerialComm::start(uint8_t channel, uint32_t baudrate, uint8_t config) {
+  start(port(channel), baudrate, config);
+}
+
+void SerialComm::close(HardwareSerial* hwserial) {
   hwserial->flush();
   hwserial->end();
+}
+
+void SerialComm::close(uint8_t channel) {
+  close(port(channel));
 }
 
 #endif
