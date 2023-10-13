@@ -9,13 +9,26 @@ disp(ports);
 
 %% Parameters
 N = 6;
-ts_us = 20000;
+ts_us = 100000;
 ticks = 1;
 dt = 1e-6 * ts_us;
 port = ports(1);
 baudrate = 115200;
+
 T = 0:dt:10;
-pwms = [255 * sin(2*pi.*T./10); 255 * cos(2*pi.*T./10); 2 * T; 255 * sin(2*pi.*T./10); 255 * cos(2*pi.*T./10); 2 * T];
+% pwms = [255 * sin(2*pi.*T./10);
+%         255 * cos(2*pi.*T./10);
+%         2 * T;
+%         255 * sin(2*pi.*T./10);
+%         255 * cos(2*pi.*T./10);
+%         2 * T];
+
+pwms = [+0.0 * 255 * ones(1, length(T));
+        +0.0 * 255 * ones(1, length(T));
+        +0.0 * 255 * ones(1, length(T));
+        -0.0 * 255 * ones(1, length(T));
+        -0.0 * 255 * ones(1, length(T));
+        -0.5 * 255 * ones(1, length(T))];
 
 status = zeros(1, length(T));
 deltas = zeros(1, length(T));
@@ -25,7 +38,7 @@ encs = zeros(N, length(T));
 
 %% Initialization
 clear robot
-robot = Robot(N, 100000, port, baudrate);
+robot = Robot(N, ts_us, port, baudrate);
 fprintf("\nWaiting for robot to be ready ");
 for k = 1:15
     pause(1);
