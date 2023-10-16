@@ -17,12 +17,12 @@
 // Pins
 // ============================================================
 
-#define PIN_ANALOG_1  A1
-#define PIN_ANALOG_2  A2
-#define PIN_ANALOG_3  A3
-#define PIN_ANALOG_4  A4
-#define PIN_ANALOG_5  A5
-#define PIN_ANALOG_6  A6
+#define PIN_ANALOG_1  A0
+#define PIN_ANALOG_2  A1
+#define PIN_ANALOG_3  A2
+#define PIN_ANALOG_4  A3
+#define PIN_ANALOG_5  A4
+#define PIN_ANALOG_6  A5
 
 
 // ============================================================
@@ -37,7 +37,7 @@
 #define COUNT         6       // Motor count
 #define CHANNEL       1       // Serial channel
 #define BAUDRATE      115200  // Serial baudrate
-#define SAMPLING_US   10000   // Communication timeout
+#define SAMPLING_US   100000  // Communication timeout
 #define ALLOW_TICKS   1       // Allowed missing control ticks
 #define COMM_WAIT_MS  1000    // Communication error wait
 
