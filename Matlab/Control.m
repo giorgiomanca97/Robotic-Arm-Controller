@@ -28,7 +28,7 @@ pwms = [+0.0 * 255 * ones(1, length(T));
         +0.0 * 255 * ones(1, length(T));
         -0.0 * 255 * ones(1, length(T));
         -0.0 * 255 * ones(1, length(T));
-        -0.5 * 255 * ones(1, length(T))];
+        -0.0 * 255 * ones(1, length(T))];
 
 status = zeros(1, length(T));
 deltas = zeros(1, length(T));
