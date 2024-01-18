@@ -155,6 +155,10 @@ bool PinControl::last_set(){
 uint8_t PinControl::last_pwm(){
   return this->pwm_;
 }
+
+float PinControl::last_control(){
+  return remap(this->pwm_, 0l, 255l, v1, v2);
+}
 #endif
 
 
@@ -230,6 +234,10 @@ bool PinMeasure::last_state(){
 
 uint16_t PinMeasure::last_value(){
   return this->value_;
+}
+
+float PinMeasure::last_measure(){
+  return remap((long) this->value_, 0l, 1023l, v1, v2);
 }
 #endif
 

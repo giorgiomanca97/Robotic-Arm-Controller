@@ -173,6 +173,7 @@ public:
   #if defined(PIN_CONTROL_STORE_VALUES)
   bool last_set();
   uint8_t last_pwm();
+  float last_control();
   #endif
 
 private:
@@ -215,6 +216,7 @@ public:
   #if defined(PIN_MEASURE_STORE_VALUES)
   bool last_state();
   uint16_t last_value();
+  float last_measure();
   #endif
 
 private:
