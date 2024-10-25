@@ -134,7 +134,7 @@ void PID::step()
   xi = xi + (bumpless ? ki * ts * e : ts * e);
   xd = A * xd + (bumpless ? kd * B * e : B * e);
 
-  if(fabs(e) > int_rst_thr && (e * xi) < 0.0) {
+  if(int_rst_thr > 0.0 && fabs(e) > int_rst_thr && (e * xi) < 0.0) {
     xi /= int_rst_div;
     if(fabs(xi) > int_rst_val) {
       xi = (xi < 0) ? -int_rst_val : int_rst_val;
