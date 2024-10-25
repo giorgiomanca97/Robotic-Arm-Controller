@@ -17,6 +17,9 @@ float remap( long v,  long a1,  long b1, float a2, float b2, bool clamp = false)
 void byteToHex(const uint8_t & byte, char & hhex, char & lhex);
 void nibbleToHex(const uint8_t & nibble, char & hex);
 
+float rad2deg(float rad);
+float deg2rad(float deg);
+
 class Timer{
 public:
   Timer();

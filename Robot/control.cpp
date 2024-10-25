@@ -128,10 +128,7 @@ void PID::input(float e)
 }
 
 void PID::step()
-{  
-  xi = xi + (bumpless ? ki*ts*e : ts*e);
-  xd = A*xd + (bumpless ? kd*B*e : B*e);
-
+{
   float e = (fabs(this->e) < err_deadzone) ? 0.0 : this->e;
 
   xi = xi + (bumpless ? ki * ts * e : ts * e);
