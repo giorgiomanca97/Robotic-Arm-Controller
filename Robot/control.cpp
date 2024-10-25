@@ -54,6 +54,64 @@ float Integrator::evolve(float u)
 
 
 // ==================================================
+// Filter
+// ==================================================
+
+void Filter::init(float time_sampling, float tau)
+{
+  float ts = time_sampling;
+  
+  if(ts > 0.0) {
+    A = exp(-time_sampling/tau);
+    B = (1.0-A)*tau;
+    C = 1.0/tau;
+  } else {
+    A = exp(-1.0/tau);
+    B = 1.0-A;
+    C = 1.0;
+  }
+
+  reset();
+}
+
+void Filter::reset()
+{
+  reset(0.0);
+}
+
+void Filter::reset(float x)
+{
+  this->x = x;
+}
+
+void Filter::input(float u)
+{
+  this->u = u;
+}
+
+void Filter::step()
+{
+  x = A*x + B*u;
+}
+
+float Filter::output()
+{
+  return C*x;
+}
+
+float Filter::evolve(float u)
+{
+  float y;
+  
+  input(u);
+  y = output();
+  step();
+
+  return y;
+}
+
+
+// ==================================================
 // PID
 // ==================================================
 
@@ -172,62 +230,4 @@ void PID::apply_saturation()
   if(int_sat > 0.0 && fabs(xi) > int_sat) {
     xi = (xi < 0.0) ? -int_sat : int_sat;
   }
-}
-
-
-// ==================================================
-// Filter
-// ==================================================
-
-void Filter::init(float time_sampling, float tau)
-{
-  float ts = time_sampling;
-  
-  if(ts > 0.0) {
-    A = exp(-time_sampling/tau);
-    B = (1.0-A)*tau;
-    C = 1.0/tau;
-  } else {
-    A = exp(-1.0/tau);
-    B = 1.0-A;
-    C = 1.0;
-  }
-
-  reset();
-}
-
-void Filter::reset()
-{
-  reset(0.0);
-}
-
-void Filter::reset(float x)
-{
-  this->x = x;
-}
-
-void Filter::input(float u)
-{
-  this->u = u;
-}
-
-void Filter::step()
-{
-  x = A*x + B*u;
-}
-
-float Filter::output()
-{
-  return C*x;
-}
-
-float Filter::evolve(float u)
-{
-  float y;
-  
-  input(u);
-  y = output();
-  step();
-
-  return y;
 }
